@@ -52,6 +52,7 @@ class AskRequest(BaseModel):
     question: str = Field(..., min_length=1, max_length=500)
     filters: ManualFilters | None = None
     top_k: int | None = Field(None, ge=4, le=20)
+    model: str | None = Field(None, max_length=200)
 
 
 def _logs_path(settings: Settings) -> Path:
@@ -95,6 +96,7 @@ def meta() -> dict:
         "embeddings": retriever.manifest["embedding_model"],
         "provedor": provider,
         "modelo": settings.llm_model if provider != "extractive" else None,
+        "modelos": pipeline.generator.model_status(),
         "limiar": retriever.min_similarity,
         "top_k": settings.top_k,
         "categorias": retriever.categories,
@@ -111,7 +113,9 @@ def ask(request: AskRequest) -> dict:
     manual = request.filters.to_filters() if request.filters else None
     if manual and manual.get("categoria") and manual["categoria"] not in pipeline.retriever.categories:
         raise HTTPException(422, f"Categoria desconhecida: {manual['categoria']}")
-    result = pipeline.ask(request.question.strip(), manual or None, request.top_k)
+    if request.model and request.model not in pipeline.generator.models:
+        raise HTTPException(422, f"Modelo não configurado: {request.model}")
+    result = pipeline.ask(request.question.strip(), manual or None, request.top_k, request.model)
     try:
         log_query(_logs_path(pipeline.settings), result, manual)
     except OSError:
@@ -119,6 +123,12 @@ def ask(request: AskRequest) -> dict:
     data = result.to_dict()
     data["cited_refs"] = sorted(result.cited_refs)
     return data
+
+
+@app.get("/api/models")
+def models() -> list[dict]:
+    """Modelos configurados (LLM_MODEL + LLM_FALLBACK_MODELS) e o estado de cada um."""
+    return _pipeline_or_503().generator.model_status()
 
 
 @app.get("/api/dashboard/base")

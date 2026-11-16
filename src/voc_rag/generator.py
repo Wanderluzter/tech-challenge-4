@@ -157,11 +157,20 @@ def _describe_api_error(error: Exception) -> str:
     return type(error).__name__
 
 
+@dataclass
+class ModelState:
+    estado: str = "disponivel"  # "disponivel" | "sem_cota" | "erro"
+    erro: str | None = None
+    desde: float | None = None  # epoch da última falha
+
+
 class Generator:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.provider = settings.resolved_llm_provider()
         self._client = None
+        self.models: list[str] = []
+        self.states: dict[str, ModelState] = {}
         if self.provider == "openai_compat":
             if not settings.llm_model:
                 raise ValueError("Defina LLM_MODEL no .env (nome do modelo no seu provedor).")
@@ -170,20 +179,76 @@ class Generator:
             self._client = OpenAI(
                 api_key=settings.llm_api_key or "sem-chave",  # Ollama e afins ignoram a chave
                 base_url=settings.llm_base_url,
+                timeout=settings.llm_timeout_s,
+                max_retries=0,  # quem decide repetir ou trocar de modelo é a cadeia abaixo
             )
+            self.models = settings.llm_models
+            self.states = {m: ModelState() for m in self.models}
         elif self.provider != "extractive":
             raise ValueError(f"LLM_PROVIDER desconhecido: {self.provider!r}")
 
-    def generate(self, context: str, evidences: list[Evidence]) -> Generation:
+    # ------------------------------------------------------------ estado dos modelos
+    def _cooling(self, model: str) -> bool:
+        """Modelo que falhou há pouco fica fora da fila até o fim do cooldown."""
+        import time
+
+        state = self.states.get(model)
+        return bool(
+            state and state.estado != "disponivel" and state.desde
+            and time.time() - state.desde < self.settings.llm_cooldown_s
+        )
+
+    def model_status(self) -> list[dict]:
+        return [
+            {
+                "modelo": m,
+                "estado": s.estado if self._cooling(m) else "disponivel",
+                "erro": s.erro if self._cooling(m) else None,
+                "desde": s.desde if self._cooling(m) else None,
+                "principal": i == 0,
+            }
+            for i, (m, s) in enumerate(self.states.items())
+        ]
+
+    def _mark(self, model: str, error: Exception | None) -> None:
+        import time
+
+        state = self.states.setdefault(model, ModelState())
+        if error is None:
+            state.estado, state.erro, state.desde = "disponivel", None, None
+        else:
+            state.estado = "sem_cota" if getattr(error, "status_code", None) == 429 else "erro"
+            state.erro, state.desde = _describe_api_error(error), time.time()
+
+    def _chain(self, model: str | None, allow_fallback: bool) -> list[str]:
+        if not self.models:
+            return [self.settings.llm_model]
+        first = model if model in self.models else self.models[0]
+        if not allow_fallback:
+            return [first]
+        rest = [m for m in self.models if m != first]
+        # modelos em cooldown vão para o fim: só são tentados se nenhum outro responder
+        return [first, *[m for m in rest if not self._cooling(m)], *[m for m in rest if self._cooling(m)]]
+
+    # ------------------------------------------------------------ geração
+    def generate(
+        self, context: str, evidences: list[Evidence], model: str | None = None, allow_fallback: bool = True
+    ) -> Generation:
         if self.provider == "extractive":
             raw = _extractive_answer(evidences)
-            model = "nenhum"
-        else:
-            from openai import APIError
+            answer, status, cited, warnings = validate_answer(raw, len(evidences))
+            return Generation(answer, status, cited, warnings, self.provider, "nenhum", raw)
 
+        from openai import APIError
+
+        chain = self._chain(model, allow_fallback)
+        failures: list[str] = []
+        for candidate in chain:
+            if candidate != chain[0] and self._cooling(candidate) and candidate != chain[-1]:
+                continue  # em cooldown e ainda há outras opções
             try:
                 completion = self._client.chat.completions.create(
-                    model=self.settings.llm_model,
+                    model=candidate,
                     temperature=self.settings.llm_temperature,
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
@@ -191,13 +256,22 @@ class Generator:
                     ],
                 )
             except APIError as error:
-                # LLM fora do ar, sem cota ou com timeout: mostra as evidências em vez de quebrar
-                answer, status, cited, warnings = validate_answer(
-                    _extractive_answer(evidences, "LLM indisponível"), len(evidences)
-                )
-                warnings.append(f"LLM indisponível ({_describe_api_error(error)}); exibindo as evidências recuperadas.")
-                return Generation(answer, status, cited, warnings, "extractive_fallback", "nenhum", "")
+                self._mark(candidate, error)
+                failures.append(f"{candidate}: {_describe_api_error(error)}")
+                continue
+            self._mark(candidate, None)
             raw = completion.choices[0].message.content or ""
-            model = self.settings.llm_model
-        answer, status, cited, warnings = validate_answer(raw, len(evidences))
-        return Generation(answer, status, cited, warnings, self.provider, model, raw)
+            answer, status, cited, warnings = validate_answer(raw, len(evidences))
+            if candidate != chain[0]:
+                warnings.insert(
+                    0, f"{chain[0]} indisponível ({failures[0].split(': ', 1)[1]}); resposta gerada por {candidate}."
+                )
+            return Generation(answer, status, cited, warnings, self.provider, candidate, raw)
+
+        # nenhum modelo respondeu: mostra as evidências em vez de quebrar
+        answer, status, cited, warnings = validate_answer(
+            _extractive_answer(evidences, "LLM indisponível"), len(evidences)
+        )
+        reason = failures[0].split(": ", 1)[1] if len(failures) == 1 else "; ".join(failures)
+        warnings.append(f"LLM indisponível ({reason}); exibindo as evidências recuperadas.")
+        return Generation(answer, status, cited, warnings, "extractive_fallback", "nenhum", "")

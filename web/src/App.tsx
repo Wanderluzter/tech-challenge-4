@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
 import { BarChart3, MessageSquareText } from "lucide-react";
-import { api, fmt, Meta } from "./api";
+import { api, fmt, Meta, ModelStatus } from "./api";
+import ModelSelector from "./components/ModelSelector";
 import AskPage from "./pages/Ask";
 
 // gráficos (recharts) só carregam ao abrir o dashboard
@@ -26,13 +27,37 @@ function NavItem({ to, icon, label }: { to: string; icon: React.ReactNode; label
   );
 }
 
+const MODEL_KEY = "voc.modelo";
+
+function readSavedModel(): string | null {
+  try { return localStorage.getItem(MODEL_KEY); } catch { return null; }
+}
+
 export default function App() {
   const [meta, setMeta] = useState<Meta | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [models, setModels] = useState<ModelStatus[]>([]);
+  const [model, setModelState] = useState<string | null>(readSavedModel);
 
   useEffect(() => {
-    api.meta().then(setMeta).catch((e: Error) => setError(e.message));
+    api.meta().then((m) => { setMeta(m); setModels(m.modelos ?? []); }).catch((e: Error) => setError(e.message));
   }, []);
+
+  // modelo salvo que deixou de existir na configuração volta para o padrão
+  useEffect(() => {
+    if (models.length && model && !models.some((m) => m.modelo === model)) setModelState(null);
+  }, [models, model]);
+
+  const setModel = useCallback((next: string) => {
+    setModelState(next);
+    try { localStorage.setItem(MODEL_KEY, next); } catch { /* armazenamento indisponível */ }
+  }, []);
+
+  const refreshModels = useCallback(() => {
+    api.models().then(setModels).catch(() => { /* mantém o último estado conhecido */ });
+  }, []);
+
+  const selected = model ?? models[0]?.modelo ?? null;
 
   return (
     <div className="min-h-screen">
@@ -50,12 +75,13 @@ export default function App() {
             <NavItem to="/dashboard" icon={<BarChart3 size={16} />} label="Dashboard" />
           </nav>
           {meta && (
-            <div className="ml-auto hidden items-center gap-2 text-xs text-[var(--muted)] md:flex">
-              <span>{fmt.int(meta.documentos)} avaliações</span>
-              <span>·</span>
-              <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">
-                {meta.modelo ?? "modo extrativo"}
-              </span>
+            <div className="ml-auto flex items-center gap-3 text-xs text-[var(--muted)]">
+              <span className="hidden lg:inline">{fmt.int(meta.documentos)} avaliações</span>
+              {models.length > 0 ? (
+                <ModelSelector models={models} selected={selected} onSelect={setModel} />
+              ) : (
+                <span className="rounded-full border border-black/10 px-2 py-0.5 dark:border-white/10">modo extrativo</span>
+              )}
             </div>
           )}
         </div>
@@ -69,7 +95,7 @@ export default function App() {
           </div>
         ) : (
           <Routes>
-            <Route path="/" element={<AskPage meta={meta} />} />
+            <Route path="/" element={<AskPage meta={meta} models={models} model={selected} setModel={setModel} refreshModels={refreshModels} />} />
             <Route path="/dashboard" element={<Suspense fallback={null}><DashboardPage /></Suspense>} />
           </Routes>
         )}

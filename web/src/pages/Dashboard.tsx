@@ -224,6 +224,15 @@ function UsageTab({ refresh }: { refresh: number }) {
           hint={`${data.recusadas_recuperacao} na recuperação (sem LLM) · ${data.recusadas_geracao} pelo LLM`} />
         <Stat label="Tempo de resposta" value={fmt.ms(data.ms_mediana_total ?? 0)} hint={`mediana · geração ${fmt.ms(data.ms_mediana_geracao ?? 0)}`} />
       </div>
+      {(data.por_modelo?.length ?? 0) > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--ink-2)]">
+          <span className="font-medium text-[var(--muted)]">Respostas por modelo:</span>
+          {data.por_modelo!.map((m) => <Pill key={m.modelo}>{m.modelo} · {m.respostas}</Pill>)}
+          {(data.trocas_de_modelo ?? 0) > 0 && (
+            <Pill tone="warn">{data.trocas_de_modelo} {data.trocas_de_modelo === 1 ? "troca automática" : "trocas automáticas"} por falta de cota</Pill>
+          )}
+        </div>
+      )}
       {(data.fallbacks ?? 0) > 0 && (
         <ErrorBox>{data.fallbacks} pergunta(s) caíram no modo extrativo porque o LLM estava indisponível (limite de requisições ou erro do provedor).</ErrorBox>
       )}
@@ -252,6 +261,7 @@ function UsageTab({ refresh }: { refresh: number }) {
                   ? <Pill tone="brand">{r.citacoes} citações</Pill>
                   : <Pill>{r.etapa_recusa === "recuperacao" ? "recusa: recuperação" : "recusa: LLM"}</Pill>}
                 {r.fallback && <Pill tone="warn">sem LLM</Pill>}
+                {!r.fallback && r.modelo && r.modelo !== "nenhum" && <span className="hidden max-w-[140px] truncate text-xs text-[var(--muted)] md:block" title={r.modelo}>{r.modelo}</span>}
                 <span className="hidden w-14 shrink-0 text-right text-xs tabular text-[var(--muted)] sm:block">{fmt.ms(r.ms_total)}</span>
               </div>
             ))}

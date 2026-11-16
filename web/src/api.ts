@@ -8,11 +8,20 @@ export type Filters = {
   uf?: string;
 };
 
+export type ModelStatus = {
+  modelo: string;
+  estado: "disponivel" | "sem_cota" | "erro";
+  erro: string | null;
+  desde: number | null; // epoch (s) da última falha
+  principal: boolean;
+};
+
 export type Meta = {
   documentos: number;
   embeddings: string;
   provedor: string;
   modelo: string | null;
+  modelos: ModelStatus[];
   limiar: number;
   top_k: number;
   categorias: string[];
@@ -65,6 +74,7 @@ export type AskResult = {
   warnings: string[];
   provider: string;
   model: string;
+  requested_model: string;
   timings_ms: Record<string, number>;
 };
 
@@ -102,6 +112,8 @@ export type UsageMetrics = {
   recusadas_geracao?: number;
   chamadas_llm?: number;
   fallbacks?: number;
+  trocas_de_modelo?: number;
+  por_modelo?: { modelo: string; respostas: number }[];
   citacoes_media?: number;
   ms_mediana_total?: number;
   ms_mediana_geracao?: number;
@@ -164,12 +176,13 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   meta: () => request<Meta>("/api/meta"),
-  ask: (question: string, filters: Filters, top_k?: number) =>
+  ask: (question: string, filters: Filters, top_k?: number, model?: string | null) =>
     request<AskResult>("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question, filters, top_k }),
+      body: JSON.stringify({ question, filters, top_k, model: model || undefined }),
     }),
+  models: () => request<ModelStatus[]>("/api/models"),
   base: () => request<BaseMetrics>("/api/dashboard/base"),
   usage: () => request<UsageMetrics>("/api/dashboard/uso"),
   quality: () => request<QualityMetrics>("/api/dashboard/qualidade"),
@@ -181,4 +194,5 @@ export const fmt = {
   pct: (n: number, digits = 1) => `${n.toLocaleString("pt-BR", { maximumFractionDigits: digits })}%`,
   ms: (n: number) => (n >= 1000 ? `${(n / 1000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} s` : `${n} ms`),
   category: (c: string) => c.replace(/_/g, " "),
+  time: (epochS: number) => new Date(epochS * 1000).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
 };

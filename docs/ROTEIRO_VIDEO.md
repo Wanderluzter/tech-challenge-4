@@ -104,5 +104,5 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
 - Se o grupo tiver mais de uma pessoa, divida por bloco (uma apresenta contexto e arquitetura, outra a demonstração, outra as decisões).
 - Grave a demonstração em um take só, sem editar as respostas: respostas reais valem mais que respostas perfeitas.
 - Se estourar o tempo, corte primeiro a pergunta 2; as perguntas 1, 4 e 5 são as que mais pontuam nos critérios.
-- Se o LLM bater no limite de requisições durante a gravação, a interface mostra as evidências com um aviso em vez de quebrar — mas grave de novo essa pergunta: ela não demonstra a geração.
+- Confira o seletor de modelo no cabeçalho antes de gravar: ponto verde = disponível, âmbar = sem cota. Se o modelo cair durante a gravação, a resposta vem de outro modelo com um aviso amarelo (dá para mencionar como recurso de resiliência); se nenhum responder, a interface mostra só as evidências — grave essa pergunta de novo.
 - Não leia o roteiro: use-o como guia de tópicos.

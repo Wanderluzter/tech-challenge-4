@@ -32,6 +32,7 @@ class RagAnswer:
     warnings: list[str] = field(default_factory=list)
     provider: str = ""
     model: str = ""
+    requested_model: str = ""
     timings_ms: dict = field(default_factory=dict)
 
     @property
@@ -50,7 +51,14 @@ class RagPipeline:
         self.retriever = Retriever(self.settings)
         self.generator = Generator(self.settings)
 
-    def ask(self, question: str, manual_filters: Filters | None = None, k: int | None = None) -> RagAnswer:
+    def ask(
+        self,
+        question: str,
+        manual_filters: Filters | None = None,
+        k: int | None = None,
+        model: str | None = None,
+        allow_fallback: bool = True,
+    ) -> RagAnswer:
         timings: dict[str, int] = {}
 
         # 1) transformação da pergunta
@@ -87,7 +95,7 @@ class RagPipeline:
         # 3) contexto + geração + validação das citações
         context = build_context(clean_text(question), retrieval.evidences, retrieval.stats, filters)
         t0 = time.perf_counter()
-        generation = self.generator.generate(context, retrieval.evidences)
+        generation = self.generator.generate(context, retrieval.evidences, model, allow_fallback)
         timings["geracao"] = round((time.perf_counter() - t0) * 1000)
 
         refused = generation.status != "ok"
@@ -103,5 +111,6 @@ class RagPipeline:
             warnings=generation.warnings,
             provider=generation.provider,
             model=generation.model,
+            requested_model=(model if model in self.generator.models else (self.generator.models or [""])[0]),
             **base,
         )

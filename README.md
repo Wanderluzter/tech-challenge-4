@@ -80,7 +80,7 @@ flowchart TD
 | Busca lexical | rank-bm25 | Termos exatos; complementa a busca densa |
 | Geração | Qualquer API compatível com OpenAI (OpenAI, Gemini, Groq, Ollama...) | Síntese com citações |
 | Interface | React + Vite + Tailwind + Recharts, servida por FastAPI; Streamlit e CLI como alternativas | Perguntas com evidências e rastro do pipeline; dashboard de métricas |
-| Testes | pytest | 42 testes, sem download de modelo nem chave de API |
+| Testes | pytest | 46 testes, sem download de modelo nem chave de API |
 
 ## 3. Como executar
 
@@ -116,7 +116,7 @@ Duas páginas: **Perguntar** (resposta com citações clicáveis, evidências, f
 
 Com `make`: `make setup data prepare index eval web` (ou `app` para o Streamlit).
 
-**LLM.** Edite o `.env` com `LLM_API_KEY`, `LLM_MODEL` e, se não for a OpenAI, `LLM_BASE_URL`. O `.env.example` traz os endpoints dos provedores mais comuns, inclusive Ollama local. Sem nenhuma chave, o sistema roda em **modo extrativo**: recupera e exibe as evidências, lista os temas, mas não sintetiza — útil para testar a recuperação sem custo.
+**LLM.** Edite o `.env` com `LLM_API_KEY`, `LLM_MODEL` e, se não for a OpenAI, `LLM_BASE_URL`. Em `LLM_FALLBACK_MODELS` liste modelos alternativos do mesmo provedor (ex.: `gemini-3-flash-preview,gemini-3.5-flash-lite`): quando um modelo fica sem cota ou não responde em `LLM_TIMEOUT` segundos, a resposta é gerada pelo próximo e a interface avisa qual modelo respondeu. O cabeçalho da interface tem um seletor de modelo que mostra o estado de cada um (disponível, sem cota, com erro). A avaliação (`eval`) nunca troca de modelo no meio da medição. O `.env.example` traz os endpoints dos provedores mais comuns, inclusive Ollama local. Sem nenhuma chave, o sistema roda em **modo extrativo**: recupera e exibe as evidências, lista os temas, mas não sintetiza — útil para testar a recuperação sem custo.
 
 **Sem acesso ao Hugging Face?** `EMBEDDING_BACKEND=lsa` usa um backend offline (TF-IDF de caracteres + SVD). É mais fraco e serve para testes; veja a seção 8.
 
@@ -262,7 +262,7 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 ## 11. Limitações e próximos passos
 
 - **Margem estreita do limiar.** Com o e5-small, perguntas válidas e fora do escopo ficam separadas por 0,001 de similaridade de suporte (seção 8). Funciona no conjunto de avaliação, mas é sensível a perguntas novas.
-- **LLM gratuito não determinístico.** A mesma pergunta pode ser respondida numa execução e recusada em outra. Um modelo pago ou local, com temperatura 0, reduz a variação.
+- **LLM gratuito não determinístico e com cota diária.** A mesma pergunta pode ser respondida numa execução e recusada em outra, e a cota de um modelo pode acabar no meio do uso. A cadeia de fallback mantém a interface respondendo, mas modelos diferentes escrevem respostas diferentes; um modelo pago ou local, com temperatura 0, reduz a variação.
 - **UF só por filtro manual.** "Clientes de São Paulo" não vira filtro automaticamente; o estado é selecionado na barra lateral.
 - **Relevância medida por proxy.** Termos esperados não substituem um conjunto anotado por pessoas; anotar ~50 pares pergunta–avaliação permitiria medir precisão e recall de verdade.
 - **Validação de citações é estrutural.** Garante que a citação existe, não que a avaliação citada sustenta a frase. Um verificador (NLI ou LLM-juiz) seria o próximo passo.

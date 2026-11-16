@@ -319,3 +319,67 @@ def test_api_dashboard_base_aggregates(client):
     base = client.get("/api/dashboard/base").json()
     assert base["total"] == sum(n["avaliacoes"] for n in base["por_nota"])
     assert {d["status"] for d in base["por_entrega"]} <= {"no_prazo", "atrasada", "nao_entregue"}
+
+
+# ----------------------------------------------------------------- seleção de modelo e fallback
+def _generator_with(pipeline, models: list[str], failing: set[str]):
+    """Gerador com cliente falso: modelos em `failing` devolvem 429, os demais respondem citando [1]."""
+    import dataclasses
+
+    import httpx
+    from openai import RateLimitError
+
+    from voc_rag.generator import Generator
+
+    settings = dataclasses.replace(
+        pipeline.settings, llm_provider="openai_compat", llm_api_key="x",
+        llm_model=models[0], llm_fallback_models=models[1:],
+    )
+    generator = Generator(settings)
+    calls: list[str] = []
+
+    class Completions:
+        def create(self, model, **_):
+            calls.append(model)
+            if model in failing:
+                response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
+                raise RateLimitError("sem cota", response=response, body=None)
+            message = type("M", (), {"content": f"- Produtos chegaram com defeito [1] (via {model})"})
+            return type("C", (), {"choices": [type("Ch", (), {"message": message})]})
+
+    generator._client = type("Client", (), {"chat": type("Chat", (), {"completions": Completions()})})()
+    return generator, calls
+
+
+def test_falls_back_to_next_model_and_warns(pipeline):
+    result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    generator, calls = _generator_with(pipeline, ["principal", "reserva", "ultimo"], failing={"principal"})
+    generation = generator.generate(result.context, result.evidences)
+    assert calls == ["principal", "reserva"]
+    assert generation.model == "reserva" and generation.status == "ok"
+    assert "principal indisponível" in generation.warnings[0] and "reserva" in generation.warnings[0]
+    status = {m["modelo"]: m["estado"] for m in generator.model_status()}
+    assert status == {"principal": "sem_cota", "reserva": "disponivel", "ultimo": "disponivel"}
+
+
+def test_chosen_model_goes_first_and_cooling_models_go_last(pipeline):
+    result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    generator, calls = _generator_with(pipeline, ["a", "b", "c"], failing={"b"})
+    generator.generate(result.context, result.evidences, model="b")  # b falha, cai para a
+    assert calls == ["b", "a"]
+    calls.clear()
+    generator.generate(result.context, result.evidences, model="c")
+    assert calls == ["c"]
+    assert generator._chain("a", allow_fallback=True) == ["a", "c", "b"]  # b em cooldown vai para o fim
+
+
+def test_no_fallback_keeps_single_model(pipeline):
+    result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    generator, calls = _generator_with(pipeline, ["a", "b"], failing={"a"})
+    generation = generator.generate(result.context, result.evidences, allow_fallback=False)
+    assert calls == ["a"] and generation.provider == "extractive_fallback"
+
+
+def test_api_rejects_unknown_model(client):
+    response = client.post("/api/ask", json={"question": "produto com defeito", "model": "nao-configurado"})
+    assert response.status_code == 422

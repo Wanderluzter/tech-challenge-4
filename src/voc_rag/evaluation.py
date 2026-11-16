@@ -46,13 +46,14 @@ def ask_with_retry(pipeline, question: str, attempts: int = 4, wait_s: float = 3
     import sys
     import time
 
-    result = pipeline.ask(question)
+    # allow_fallback=False: uma medição usa um único modelo; trocar no meio misturaria resultados
+    result = pipeline.ask(question, allow_fallback=False)
     for attempt in range(1, attempts):
         if result.provider != FALLBACK:
             break
         print(f"  LLM indisponível; nova tentativa em {wait_s:.0f}s ({attempt}/{attempts - 1})", file=sys.stderr)
         time.sleep(wait_s)
-        result = pipeline.ask(question)
+        result = pipeline.ask(question, allow_fallback=False)
     return result
 
 

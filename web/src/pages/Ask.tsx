@@ -2,10 +2,11 @@ import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from "reac
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
-  AlertTriangle, ArrowRight, ChevronDown, Filter, Loader2, Search, ShieldAlert, Sparkles, X,
+  AlertTriangle, ArrowRight, ChevronDown, Cpu, Filter, Loader2, Search, ShieldAlert, Sparkles, X,
 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { api, AskResult, Evidence, Filters, fmt, Meta } from "../api";
+import { api, AskResult, Evidence, Filters, fmt, Meta, ModelStatus } from "../api";
+import { firstAvailable, STATE_LABEL } from "../components/ModelSelector";
 import { Card, Pill, Skeleton, Stars } from "../components/ui";
 
 const DELIVERY: Record<string, string> = { no_prazo: "No prazo", atrasada: "Atrasada", nao_entregue: "Sem entrega" };
@@ -231,8 +232,55 @@ function Trace({ result }: { result: AskResult }) {
   );
 }
 
+// ------------------------------------------------------------------ avisos de modelo
+const MODEL_WARNING = /indisponível/;
+
+function ModelNotice({ result, models, onUse, onRetry }: {
+  result: AskResult;
+  models: ModelStatus[];
+  onUse: (model: string) => void;
+  onRetry: (model: string) => void;
+}) {
+  const box = "flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100";
+  const button = "rounded-lg bg-amber-900/10 px-2.5 py-1 text-xs font-medium hover:bg-amber-900/20 dark:bg-white/10 dark:hover:bg-white/20";
+  if (result.provider === "extractive_fallback") {
+    const next = firstAvailable(models);
+    return (
+      <div className={box} role="status">
+        <AlertTriangle size={16} className="shrink-0" />
+        <span className="min-w-0 flex-1">
+          <strong>Nenhum modelo respondeu.</strong> {result.warnings.find((w) => MODEL_WARNING.test(w))} As evidências abaixo são da busca, sem síntese.
+        </span>
+        {next
+          ? <button type="button" className={button} onClick={() => onRetry(next.modelo)}>Tentar de novo com {next.modelo}</button>
+          : <span className="text-xs">Todos os modelos estão sem cota; tente mais tarde ou ajuste <code>LLM_FALLBACK_MODELS</code>.</span>}
+      </div>
+    );
+  }
+  if (result.requested_model && result.model && result.model !== "nenhum" && result.model !== result.requested_model) {
+    const reason = models.find((m) => m.modelo === result.requested_model);
+    return (
+      <div className={box} role="status">
+        <Cpu size={16} className="shrink-0" />
+        <span className="min-w-0 flex-1">
+          <strong>{result.requested_model}</strong> {reason && reason.estado !== "disponivel" ? `está ${STATE_LABEL[reason.estado].toLowerCase()}` : "não respondeu"}
+          {reason?.erro ? ` (${reason.erro})` : ""}. Esta resposta foi gerada por <strong>{result.model}</strong>.
+        </span>
+        <button type="button" className={button} onClick={() => onUse(result.model)}>Usar {result.model} nas próximas</button>
+      </div>
+    );
+  }
+  return null;
+}
+
 // ------------------------------------------------------------------ página
-export default function AskPage({ meta }: { meta: Meta | null }) {
+export default function AskPage({ meta, models, model, setModel, refreshModels }: {
+  meta: Meta | null;
+  models: ModelStatus[];
+  model: string | null;
+  setModel: (model: string) => void;
+  refreshModels: () => void;
+}) {
   const [question, setQuestion] = useState("");
   const [filters, setFilters] = useState<Filters>({});
   const [topK, setTopK] = useState(12);
@@ -256,7 +304,7 @@ export default function AskPage({ meta }: { meta: Meta | null }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function submit(text = question) {
+  async function submit(text = question, modelOverride?: string) {
     const q = text.trim();
     if (!q || loading) return;
     setQuestion(q);
@@ -265,12 +313,13 @@ export default function AskPage({ meta }: { meta: Meta | null }) {
     const start = Date.now();
     timer.current = window.setInterval(() => setElapsed(Math.floor((Date.now() - start) / 1000)), 500);
     try {
-      setResult(await api.ask(q, filters, topK));
+      setResult(await api.ask(q, filters, topK, modelOverride ?? model));
     } catch (e) {
       setError((e as Error).message);
     } finally {
       window.clearInterval(timer.current);
       setLoading(false);
+      refreshModels(); // a pergunta pode ter revelado um modelo sem cota
     }
   }
 
@@ -314,6 +363,23 @@ export default function AskPage({ meta }: { meta: Meta | null }) {
             <span className="hidden sm:inline">Perguntar</span>
           </button>
         </form>
+        {(() => {
+          const current = models.find((m) => m.modelo === model);
+          if (!current || current.estado === "disponivel" || loading) return null;
+          const next = firstAvailable(models, current.modelo);
+          return (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-amber-800 dark:text-amber-200">
+              <AlertTriangle size={14} />
+              <span><strong>{current.modelo}</strong> está {STATE_LABEL[current.estado].toLowerCase()}{current.desde ? ` desde ${fmt.time(current.desde)}` : ""}. As perguntas usarão o próximo modelo disponível.</span>
+              {next && (
+                <button type="button" onClick={() => setModel(next.modelo)}
+                  className="rounded-md border border-amber-300 px-2 py-0.5 font-medium hover:bg-amber-50 dark:border-amber-500/40 dark:hover:bg-amber-500/10">
+                  Trocar para {next.modelo}
+                </button>
+              )}
+            </div>
+          );
+        })()}
         {showFilters && meta && (
           <div className="mt-3">
             <FilterPanel meta={meta} filters={filters} setFilters={setFilters} topK={topK} setTopK={setTopK} />
@@ -337,10 +403,15 @@ export default function AskPage({ meta }: { meta: Meta | null }) {
         </div>
       )}
 
+      {result && !loading && (
+        <ModelNotice result={result} models={models} onUse={setModel}
+          onRetry={(m) => { setModel(m); submit(result.question, m); }} />
+      )}
+
       {loading && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <Card title={<span className="inline-flex items-center gap-2"><Loader2 size={16} className="animate-spin text-brand-500" /> Analisando avaliações…</span>}
-            subtitle={elapsed < 2 ? "Recuperando as avaliações mais relevantes" : `Gerando a resposta com o LLM · ${elapsed}s`}>
+            subtitle={elapsed < 2 ? "Recuperando as avaliações mais relevantes" : `Gerando a resposta com ${model ?? "o LLM"} · ${elapsed}s`}>
             <div className="grid gap-3"><Skeleton className="h-4 w-11/12" /><Skeleton className="h-4 w-10/12" /><Skeleton className="h-4 w-9/12" /><Skeleton className="h-4 w-10/12" /></div>
           </Card>
           <Card><div className="grid gap-3"><Skeleton className="h-4 w-1/2" /><Skeleton className="h-16" /><Skeleton className="h-24" /></div></Card>
@@ -370,7 +441,7 @@ export default function AskPage({ meta }: { meta: Meta | null }) {
                     {answerMd}
                   </ReactMarkdown>
                 </div>
-                {result.warnings.map((w) => (
+                {result.warnings.filter((w) => !MODEL_WARNING.test(w)).map((w) => (
                   <div key={w} className="mt-4 flex items-start gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
                     <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {w}
                   </div>

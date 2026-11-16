@@ -65,6 +65,20 @@ class Settings:
         default_factory=lambda: os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or None
     )
     llm_temperature: float = field(default_factory=lambda: float(_env("LLM_TEMPERATURE", "0.1")))
+    # Modelos alternativos do mesmo provedor, em ordem de preferência. Quando um modelo fica
+    # sem cota ou fora do ar, a geração tenta o próximo; a interface permite escolher o modelo.
+    llm_fallback_models: list[str] = field(
+        default_factory=lambda: [m.strip() for m in _env("LLM_FALLBACK_MODELS", "").split(",") if m.strip()]
+    )
+    llm_timeout_s: float = field(default_factory=lambda: float(_env("LLM_TIMEOUT", "90")))
+    # tempo que um modelo sem cota fica fora da fila antes de ser tentado de novo
+    llm_cooldown_s: float = field(default_factory=lambda: float(_env("LLM_COOLDOWN", "300")))
+
+    @property
+    def llm_models(self) -> list[str]:
+        """Modelo principal seguido dos alternativos, sem repetição."""
+        models = [self.llm_model, *self.llm_fallback_models] if self.llm_model else list(self.llm_fallback_models)
+        return list(dict.fromkeys(m for m in models if m))
 
     @property
     def documents_path(self) -> Path:

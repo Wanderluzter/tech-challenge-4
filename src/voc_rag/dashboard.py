@@ -107,6 +107,8 @@ def log_query(path: Path, result, manual_filters: dict | None) -> None:
         "sim_suporte": round(result.retrieval.support_similarity, 3),
         "provedor": result.provider or "nenhum",
         "modelo": result.model or "",
+        "modelo_solicitado": result.requested_model or "",
+        "troca_de_modelo": bool(result.requested_model and result.model not in ("", "nenhum", result.requested_model)),
         "fallback": result.provider == "extractive_fallback",
         "ms_total": int(sum(timings.values())),
         "ms_recuperacao": int(timings.get("recuperacao", 0)),
@@ -146,12 +148,22 @@ def usage_metrics(path: Path, recent: int = 15) -> dict:
         "recusadas_geracao": sum(r["etapa_recusa"] == "geracao" for r in records),
         "chamadas_llm": sum(1 for r in generated if not r.get("fallback")),
         "fallbacks": sum(1 for r in records if r.get("fallback")),
+        "trocas_de_modelo": sum(1 for r in records if r.get("troca_de_modelo")),
+        "por_modelo": _count_models(records),
         "citacoes_media": round(sum(r["citacoes"] for r in answered) / len(answered), 1) if answered else 0,
         "ms_mediana_total": median([r["ms_total"] for r in records]),
         "ms_mediana_geracao": median([r["ms_geracao"] for r in generated]),
         "por_dia": sorted(by_day.values(), key=lambda d: d["dia"]),
         "registros": list(reversed(records[-recent:])),
     }
+
+
+def _count_models(records: list[dict]) -> list[dict]:
+    counts: dict[str, int] = {}
+    for r in records:
+        if r.get("ms_geracao") and r.get("modelo") not in (None, "", "nenhum"):
+            counts[r["modelo"]] = counts.get(r["modelo"], 0) + 1
+    return [{"modelo": m, "respostas": n} for m, n in sorted(counts.items(), key=lambda kv: -kv[1])]
 
 
 # ----------------------------------------------------------------- qualidade
