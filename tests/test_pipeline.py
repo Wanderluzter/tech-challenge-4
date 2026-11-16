@@ -250,3 +250,72 @@ def test_broad_question_is_expanded_by_frequent_themes(pipeline):
 def test_specific_question_is_not_expanded(pipeline):
     result = pipeline.ask("Os clientes reclamam de produto com defeito?")
     assert not result.parsed.broad and len(result.retrieval.queries) == 1
+
+
+def test_llm_failure_falls_back_to_evidences(pipeline):
+    """Erro da API do LLM (ex.: 429) não derruba a resposta: volta ao modo extrativo com aviso."""
+    import dataclasses
+
+    import httpx
+    from openai import RateLimitError
+
+    from voc_rag.generator import Generator
+
+    settings = dataclasses.replace(pipeline.settings, llm_provider="openai_compat", llm_api_key="x", llm_model="m")
+    generator = Generator(settings)
+
+    class FailingCompletions:
+        def create(self, **_):
+            response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
+            raise RateLimitError("rate limited", response=response, body=None)
+
+    generator._client = type("Client", (), {"chat": type("Chat", (), {"completions": FailingCompletions()})()})()
+    result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    assert result.evidences, "a pergunta de teste precisa recuperar evidências"
+    generation = generator.generate(result.context, result.evidences)
+    assert generation.provider == "extractive_fallback"
+    assert generation.status == "ok" and generation.cited_refs
+    assert any("limite de requisições" in w for w in generation.warnings)
+
+
+# ----------------------------------------------------------------- API (interface React)
+@pytest.fixture()
+def client(pipeline, tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from voc_rag import api
+
+    monkeypatch.setattr(api, "get_pipeline", lambda: pipeline)
+    monkeypatch.setattr(api, "get_base_metrics", lambda: api.base_metrics(pipeline.retriever.docs))
+    monkeypatch.setattr(api, "_logs_path", lambda _settings: tmp_path / "perguntas.jsonl")
+    monkeypatch.setattr(api, "Settings", lambda: pipeline.settings)
+    return TestClient(api.app)
+
+
+def test_api_meta_lists_filter_options(client):
+    meta = client.get("/api/meta").json()
+    assert meta["documentos"] > 0 and meta["categorias"] and meta["exemplos"]
+
+
+def test_api_ask_returns_grounded_answer_and_logs_usage(client):
+    response = client.post("/api/ask", json={"question": "Os clientes reclamam de produto que veio quebrado ou com defeito?"})
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "ok" and data["cited_refs"]
+    assert set(data["cited_refs"]) <= {ev["ref"] for ev in data["evidences"]}
+    usage = client.get("/api/dashboard/uso").json()
+    assert usage["total"] == 1 and usage["respondidas"] == 1
+
+
+def test_api_manual_filters_are_applied_and_validated(client):
+    data = client.post("/api/ask", json={"question": "produto com defeito", "filters": {"review_score": {"gte": 1, "lte": 2}}}).json()
+    assert data["filters"]["review_score"] == {"gte": 1, "lte": 2}
+    assert all(ev["review_score"] <= 2 for ev in data["evidences"])
+    bad = client.post("/api/ask", json={"question": "produto", "filters": {"categoria": "nao_existe"}})
+    assert bad.status_code == 422
+
+
+def test_api_dashboard_base_aggregates(client):
+    base = client.get("/api/dashboard/base").json()
+    assert base["total"] == sum(n["avaliacoes"] for n in base["por_nota"])
+    assert {d["status"] for d in base["por_entrega"]} <= {"no_prazo", "atrasada", "nao_entregue"}

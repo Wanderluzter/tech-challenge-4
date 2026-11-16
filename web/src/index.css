@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Papéis de cor dos gráficos (paleta validada: claro e escuro escolhidos, não invertidos). */
+:root {
+  color-scheme: light;
+  --page: #f7f7f5;
+  --surface: #ffffff;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --grid: #e9e8e3;
+  --axis: #c3c2b7;
+  --series-1: #2a78d6; /* azul — série principal / positivo / no escopo */
+  --series-2: #eb6834; /* laranja — segunda série / fora do escopo */
+  --series-neg: #e34948; /* vermelho — temas negativos */
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  --warning: #fab219;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #f0efec;
+    --ink-2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-neg: #e66767;
+  }
+}
+
+body {
+  background: var(--page);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* Resposta em Markdown */
+.answer ul { list-style: disc; padding-left: 1.25rem; display: grid; gap: 0.5rem; }
+.answer ol { list-style: decimal; padding-left: 1.25rem; display: grid; gap: 0.5rem; }
+.answer p + p, .answer p + ul, .answer ul + p { margin-top: 0.75rem; }
+.answer strong { font-weight: 600; }
+.answer em { color: var(--ink-2); }
+
+/* Recharts: tooltip e eixos no tom da interface */
+.recharts-cartesian-axis-tick-value { fill: var(--muted); font-size: 12px; }
+.recharts-default-tooltip {
+  background: var(--surface) !important;
+  border: 1px solid var(--grid) !important;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  font-size: 13px;
+}
+.recharts-tooltip-label { color: var(--ink-2); margin-bottom: 2px; }
+
+@keyframes shimmer { 0% { opacity: 0.55 } 50% { opacity: 1 } 100% { opacity: 0.55 } }
+.skeleton { animation: shimmer 1.4s ease-in-out infinite; }

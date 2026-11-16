@@ -1,0 +1,664 @@
+{
+  "gerado_em": "2026-11-16T19:04:04+00:00",
+  "recuperacao": {
+    "backend": "intfloat/multilingual-e5-small",
+    "perguntas": 30,
+    "filtros_corretos": "30/30",
+    "relevancia_termos_media": 0.779,
+    "limiar_atual": 0.875,
+    "acuracia_escopo_limiar_atual": 1.0,
+    "limiar_sugerido": 0.875,
+    "acuracia_escopo_limiar_sugerido": 1.0,
+    "sim_suporte_no_escopo_min": 0.875,
+    "sim_suporte_fora_escopo_max": 0.874,
+    "linhas": [
+      {
+        "pergunta": "Quais são os principais problemas relatados pelos clientes?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.42,
+        "sim_max": 0.966,
+        "sim_suporte": 0.96
+      },
+      {
+        "pergunta": "Quais reclamações relacionadas à entrega aparecem com maior frequência?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.58,
+        "sim_max": 0.925,
+        "sim_suporte": 0.919
+      },
+      {
+        "pergunta": "O que os clientes mais elogiam em suas experiências de compra?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 4,
+            "lte": 5
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.968,
+        "sim_suporte": 0.959
+      },
+      {
+        "pergunta": "Quais problemas são relatados por clientes insatisfeitos?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 2
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.5,
+        "sim_max": 0.966,
+        "sim_suporte": 0.959
+      },
+      {
+        "pergunta": "Existem padrões recorrentes nas avaliações relacionadas à qualidade dos produtos?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.949,
+        "sim_suporte": 0.941
+      },
+      {
+        "pergunta": "O que os clientes relatam sobre problemas relacionados à entrega?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.83,
+        "sim_max": 0.919,
+        "sim_suporte": 0.912
+      },
+      {
+        "pergunta": "Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.33,
+        "sim_max": 0.926,
+        "sim_suporte": 0.919
+      },
+      {
+        "pergunta": "Quais são os principais problemas relatados nas avaliações com nota baixa?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 2
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.5,
+        "sim_max": 0.966,
+        "sim_suporte": 0.959
+      },
+      {
+        "pergunta": "O que os clientes mais elogiam na categoria beleza e saúde?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 4,
+            "lte": 5
+          },
+          "categoria": "beleza_saude"
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.968,
+        "sim_suporte": 0.948
+      },
+      {
+        "pergunta": "Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "entrega_status": [
+            "atrasada",
+            "nao_entregue"
+          ]
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.83,
+        "sim_max": 0.879,
+        "sim_suporte": 0.877
+      },
+      {
+        "pergunta": "Clientes reclamam de produto recebido com defeito ou quebrado?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 0.92,
+        "sim_max": 0.913,
+        "sim_suporte": 0.911
+      },
+      {
+        "pergunta": "Há relatos de clientes que receberam um produto diferente do que compraram?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.939,
+        "sim_suporte": 0.937
+      },
+      {
+        "pergunta": "Como os clientes avaliam o atendimento quando têm um problema?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 0.92,
+        "sim_max": 0.904,
+        "sim_suporte": 0.895
+      },
+      {
+        "pergunta": "Os clientes reclamam de pedidos que chegaram incompletos?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 0.58,
+        "sim_max": 0.916,
+        "sim_suporte": 0.904
+      },
+      {
+        "pergunta": "Os clientes reclamam do aplicativo de celular da loja?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 0.5,
+        "sim_max": 0.899,
+        "sim_suporte": 0.896
+      },
+      {
+        "pergunta": "Quais dificuldades os clientes relatam ao pedir troca ou devolução?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.934,
+        "sim_suporte": 0.922
+      },
+      {
+        "pergunta": "Os clientes relatam problemas com reembolso ou estorno?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.884,
+        "sim_suporte": 0.875
+      },
+      {
+        "pergunta": "O que os clientes dizem sobre a embalagem dos produtos?",
+        "no_escopo": true,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": 0.83,
+        "sim_max": 0.918,
+        "sim_suporte": 0.914
+      },
+      {
+        "pergunta": "Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 1,
+            "lte": 3
+          }
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 1.0,
+        "sim_max": 0.884,
+        "sim_suporte": 0.883
+      },
+      {
+        "pergunta": "Quais elogios os clientes fazem aos produtos de cama, mesa e banho?",
+        "no_escopo": true,
+        "filtros_inferidos": {
+          "review_score": {
+            "gte": 4,
+            "lte": 5
+          },
+          "categoria": "cama_mesa_banho"
+        },
+        "filtros_ok": true,
+        "relevancia_termos": 0.83,
+        "sim_max": 0.915,
+        "sim_suporte": 0.907
+      },
+      {
+        "pergunta": "Qual é a capital da França?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.819,
+        "sim_suporte": 0.812
+      },
+      {
+        "pergunta": "Explique como funciona a fotossíntese.",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.867,
+        "sim_suporte": 0.86
+      },
+      {
+        "pergunta": "Escreva um código em Python para ordenar uma lista.",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.87,
+        "sim_suporte": 0.867
+      },
+      {
+        "pergunta": "Quem ganhou a Copa do Mundo de 2002?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.873,
+        "sim_suporte": 0.864
+      },
+      {
+        "pergunta": "Qual a previsão do tempo para amanhã em São Paulo?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.877,
+        "sim_suporte": 0.869
+      },
+      {
+        "pergunta": "Qual foi a cotação do dólar ontem?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.869,
+        "sim_suporte": 0.866
+      },
+      {
+        "pergunta": "Me dê uma receita de bolo de cenoura.",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.879,
+        "sim_suporte": 0.874
+      },
+      {
+        "pergunta": "Quais os sintomas da dengue?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.866,
+        "sim_suporte": 0.864
+      },
+      {
+        "pergunta": "Como declarar o imposto de renda?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.864,
+        "sim_suporte": 0.861
+      },
+      {
+        "pergunta": "Quem é o presidente dos Estados Unidos?",
+        "no_escopo": false,
+        "filtros_inferidos": {},
+        "filtros_ok": true,
+        "relevancia_termos": null,
+        "sim_max": 0.837,
+        "sim_suporte": 0.832
+      }
+    ]
+  },
+  "ponta_a_ponta": {
+    "provedor": "openai_compat",
+    "modelo": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "limiar": 0.875,
+    "corretas": 32,
+    "perguntas": 34,
+    "linhas": [
+      {
+        "pergunta": "Quais são os principais problemas relatados pelos clientes?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais reclamações relacionadas à entrega aparecem com maior frequência?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 9,
+        "correto": true
+      },
+      {
+        "pergunta": "O que os clientes mais elogiam em suas experiências de compra?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais problemas são relatados por clientes insatisfeitos?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Existem padrões recorrentes nas avaliações relacionadas à qualidade dos produtos?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "O que os clientes relatam sobre problemas relacionados à entrega?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 11,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 11,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais são os principais problemas relatados nas avaliações com nota baixa?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "O que os clientes mais elogiam na categoria beleza e saúde?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 7,
+        "correto": true
+      },
+      {
+        "pergunta": "Clientes reclamam de produto recebido com defeito ou quebrado?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Há relatos de clientes que receberam um produto diferente do que compraram?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 2,
+        "correto": true
+      },
+      {
+        "pergunta": "Como os clientes avaliam o atendimento quando têm um problema?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "recusar",
+        "etapa_recusa": "geracao",
+        "citacoes": 0,
+        "correto": false
+      },
+      {
+        "pergunta": "Os clientes reclamam de pedidos que chegaram incompletos?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 11,
+        "correto": true
+      },
+      {
+        "pergunta": "Os clientes reclamam do aplicativo de celular da loja?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 1,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais dificuldades os clientes relatam ao pedir troca ou devolução?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 10,
+        "correto": true
+      },
+      {
+        "pergunta": "Os clientes relatam problemas com reembolso ou estorno?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": false
+      },
+      {
+        "pergunta": "O que os clientes dizem sobre a embalagem dos produtos?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 10,
+        "correto": true
+      },
+      {
+        "pergunta": "Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 9,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais elogios os clientes fazem aos produtos de cama, mesa e banho?",
+        "tipo": "no_escopo",
+        "esperado": "responder",
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "citacoes": 12,
+        "correto": true
+      },
+      {
+        "pergunta": "Qual é a capital da França?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Explique como funciona a fotossíntese.",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Escreva um código em Python para ordenar uma lista.",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Quem ganhou a Copa do Mundo de 2002?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Qual a previsão do tempo para amanhã em São Paulo?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Qual foi a cotação do dólar ontem?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Me dê uma receita de bolo de cenoura.",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Quais os sintomas da dengue?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Como declarar o imposto de renda?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Quem é o presidente dos Estados Unidos?",
+        "tipo": "fora_do_escopo",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "O que os clientes acham do tempo de bateria do iPhone 15?",
+        "tipo": "sem_resposta_na_base",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Qual foi o faturamento total da empresa em 2018?",
+        "tipo": "sem_resposta_na_base",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "geracao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "Os clientes conseguiram pagar com Pix?",
+        "tipo": "sem_resposta_na_base",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      },
+      {
+        "pergunta": "O que os clientes acham do programa de cashback?",
+        "tipo": "sem_resposta_na_base",
+        "esperado": "recusar",
+        "obtido": "recusar",
+        "etapa_recusa": "recuperacao",
+        "citacoes": 0,
+        "correto": true
+      }
+    ]
+  }
+}

@@ -125,11 +125,11 @@ def validate_answer(raw: str, n_evidences: int) -> tuple[str, str, list[int], li
     return text, "ok", cited, warnings
 
 
-def _extractive_answer(evidences: list[Evidence]) -> str:
+def _extractive_answer(evidences: list[Evidence], reason: str = "sem LLM configurado") -> str:
     """Resposta sem LLM: resume temas das evidências e lista os trechos, sem interpretar."""
     themes = Counter(t for ev in evidences for t in ev.temas)
     lines = [
-        "_Modo extrativo (sem LLM configurado): os trechos abaixo são citações literais das "
+        f"_Modo extrativo ({reason}): os trechos abaixo são citações literais das "
         "avaliações recuperadas, sem síntese por modelo de linguagem._",
         "",
     ]
@@ -144,6 +144,17 @@ def _extractive_answer(evidences: list[Evidence]) -> str:
         snippet = ev.texto if len(ev.texto) <= 180 else ev.texto[:177] + "..."
         lines.append(f'- "{snippet}" (nota {ev.review_score}) [{ev.ref}]')
     return "\n".join(lines)
+
+
+def _describe_api_error(error: Exception) -> str:
+    status = getattr(error, "status_code", None)
+    if status == 429:
+        return "limite de requisições do provedor atingido"
+    if status in (401, 403):
+        return "chave de API inválida ou sem permissão"
+    if status:
+        return f"erro {status} do provedor"
+    return type(error).__name__
 
 
 class Generator:
@@ -168,14 +179,24 @@ class Generator:
             raw = _extractive_answer(evidences)
             model = "nenhum"
         else:
-            completion = self._client.chat.completions.create(
-                model=self.settings.llm_model,
-                temperature=self.settings.llm_temperature,
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": context},
-                ],
-            )
+            from openai import APIError
+
+            try:
+                completion = self._client.chat.completions.create(
+                    model=self.settings.llm_model,
+                    temperature=self.settings.llm_temperature,
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": context},
+                    ],
+                )
+            except APIError as error:
+                # LLM fora do ar, sem cota ou com timeout: mostra as evidências em vez de quebrar
+                answer, status, cited, warnings = validate_answer(
+                    _extractive_answer(evidences, "LLM indisponível"), len(evidences)
+                )
+                warnings.append(f"LLM indisponível ({_describe_api_error(error)}); exibindo as evidências recuperadas.")
+                return Generation(answer, status, cited, warnings, "extractive_fallback", "nenhum", "")
             raw = completion.choices[0].message.content or ""
             model = self.settings.llm_model
         answer, status, cited, warnings = validate_answer(raw, len(evidences))

@@ -13,6 +13,12 @@
   {"pergunta": "Há relatos de clientes que receberam um produto diferente do que compraram?", "no_escopo": true, "termos": ["diferente", "errad", "outro produto", "nao e o que"]},
   {"pergunta": "Como os clientes avaliam o atendimento quando têm um problema?", "no_escopo": true, "termos": ["atendimento", "contato", "respost", "retorno", "resolv"]},
   {"pergunta": "Os clientes reclamam de pedidos que chegaram incompletos?", "no_escopo": true, "termos": ["falt", "incomplet", "apenas", "so veio", "so recebi", "somente"]},
+  {"pergunta": "Os clientes reclamam do aplicativo de celular da loja?", "no_escopo": true, "termos": ["aplicativo", "app"]},
+  {"pergunta": "Quais dificuldades os clientes relatam ao pedir troca ou devolução?", "no_escopo": true, "termos": ["troca", "trocar", "devolu", "devolv"]},
+  {"pergunta": "Os clientes relatam problemas com reembolso ou estorno?", "no_escopo": true, "filtros": {"review_score": {"gte": 1, "lte": 3}}, "termos": ["reembols", "estorn", "dinheiro de volta", "devolu"]},
+  {"pergunta": "O que os clientes dizem sobre a embalagem dos produtos?", "no_escopo": true, "termos": ["embalag", "embalad", "caixa", "pacote"]},
+  {"pergunta": "Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso?", "no_escopo": true, "filtros": {"review_score": {"gte": 1, "lte": 3}}, "termos": ["cobran", "cobrad", "cancel", "estorn"]},
+  {"pergunta": "Quais elogios os clientes fazem aos produtos de cama, mesa e banho?", "no_escopo": true, "filtros": {"review_score": {"gte": 4, "lte": 5}, "categoria": "cama_mesa_banho"}, "termos": ["otim", "excelente", "qualidade", "macio", "bonit", "recomend", "bom"]},
   {"pergunta": "Qual é a capital da França?", "no_escopo": false},
   {"pergunta": "Explique como funciona a fotossíntese.", "no_escopo": false},
   {"pergunta": "Escreva um código em Python para ordenar uma lista.", "no_escopo": false},
@@ -21,7 +27,10 @@
   {"pergunta": "Qual foi a cotação do dólar ontem?", "no_escopo": false},
   {"pergunta": "Me dê uma receita de bolo de cenoura.", "no_escopo": false},
   {"pergunta": "Quais os sintomas da dengue?", "no_escopo": false},
+  {"pergunta": "Como declarar o imposto de renda?", "no_escopo": false},
+  {"pergunta": "Quem é o presidente dos Estados Unidos?", "no_escopo": false},
   {"pergunta": "O que os clientes acham do tempo de bateria do iPhone 15?", "no_escopo": false, "tipo": "sem_resposta_na_base"},
   {"pergunta": "Qual foi o faturamento total da empresa em 2018?", "no_escopo": false, "tipo": "sem_resposta_na_base"},
-  {"pergunta": "Os clientes reclamam do aplicativo de celular da loja?", "no_escopo": false, "tipo": "sem_resposta_na_base"}
+  {"pergunta": "Os clientes conseguiram pagar com Pix?", "no_escopo": false, "tipo": "sem_resposta_na_base"},
+  {"pergunta": "O que os clientes acham do programa de cashback?", "no_escopo": false, "tipo": "sem_resposta_na_base"}
 ]

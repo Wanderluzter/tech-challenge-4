@@ -69,8 +69,8 @@ flowchart TD
 | Banco vetorial | ChromaDB (persistente, HNSW, cosseno) | Busca densa com filtro de metadados |
 | Busca lexical | rank-bm25 | Termos exatos; complementa a busca densa |
 | Geração | Qualquer API compatível com OpenAI (OpenAI, Gemini, Groq, Ollama...) | Síntese com citações |
-| Interface | Streamlit + CLI | Demonstração e rastro do pipeline |
-| Testes | pytest | 37 testes, sem download de modelo nem chave de API |
+| Interface | React + Vite + Tailwind + Recharts, servida por FastAPI; Streamlit e CLI como alternativas | Perguntas com evidências e rastro do pipeline; dashboard de métricas |
+| Testes | pytest | 42 testes, sem download de modelo nem chave de API |
 
 ## 3. Como executar
 
@@ -90,11 +90,21 @@ python -m voc_rag.cli prepare        # CSVs → data/processed/documents.parquet
 python -m voc_rag.cli index          # embeddings + ChromaDB (alguns minutos em CPU)
 python -m voc_rag.cli eval --write   # calibra o limiar de similaridade (ver seção 8)
 
-streamlit run app/streamlit_app.py   # interface
 python -m voc_rag.cli ask "O que os clientes relatam sobre atraso na entrega?"
 ```
 
-Com `make`: `make setup data prepare index eval app`.
+**Interface React (principal)** — requer Node 18+:
+
+```bash
+cd web && npm install && npm run build && cd ..   # gera web/dist
+uvicorn voc_rag.api:app --port 8000               # interface + API em http://localhost:8000
+```
+
+Duas páginas: **Perguntar** (resposta com citações clicáveis, evidências, filtros de metadados e o rastro de cada etapa do pipeline) e **Dashboard**, com três abas — *Base de avaliações* (notas, temas, categorias, efeito do atraso na nota), *Uso do RAG* (perguntas feitas, taxa de recusa por etapa, tempo de resposta; registradas em `data/logs/perguntas.jsonl`, fora do git) e *Qualidade* (resultado do `eval`, incluindo onde o limiar separa perguntas no escopo e fora dele). `/?q=<pergunta>` abre a página já com a resposta. Para desenvolver o frontend com recarga automática: `make api` num terminal e `make web-dev` em outro (http://localhost:5173).
+
+**Alternativa sem Node:** `streamlit run app/streamlit_app.py` abre a interface Streamlit, com as mesmas respostas e evidências (sem o dashboard).
+
+Com `make`: `make setup data prepare index eval web` (ou `app` para o Streamlit).
 
 **LLM.** Edite o `.env` com `LLM_API_KEY`, `LLM_MODEL` e, se não for a OpenAI, `LLM_BASE_URL`. O `.env.example` traz os endpoints dos provedores mais comuns, inclusive Ollama local. Sem nenhuma chave, o sistema roda em **modo extrativo**: recupera e exibe as evidências, lista os temas, mas não sintetiza — útil para testar a recuperação sem custo.
 
@@ -177,49 +187,50 @@ A recusa informa em que etapa ocorreu e por quê.
 
 ## 8. Avaliação
 
-`python -m voc_rag.cli eval` roda [`eval/perguntas.json`](eval/perguntas.json): 14 perguntas no escopo (inclui todas as do enunciado), 8 fora do escopo e 3 do domínio sem resposta na base. Mede filtros inferidos, relevância@k por termos esperados (proxy auditável; não substitui julgamento humano) e a similaridade de suporte — a da 3ª melhor avaliação distinta —, usada para **calibrar o limiar** que separa o que responder do que recusar. `--write` grava o limiar no manifesto do índice; `--e2e` roda o pipeline completo e mostra qual barreira recusou cada pergunta.
+`python -m voc_rag.cli eval --write --e2e` roda [`eval/perguntas.json`](eval/perguntas.json): **20 perguntas no escopo** (todas as do enunciado + 6 da equipe: aplicativo, troca/devolução, reembolso, embalagem, cobrança/cancelamento e elogios em cama, mesa e banho), **10 fora do escopo** e **4 do domínio sem resposta na base** (bateria do iPhone 15, faturamento, Pix e cashback — os dois últimos têm zero menções nas 38.287 avaliações). Mede filtros inferidos, relevância@k por termos esperados (proxy auditável; não substitui julgamento humano) e a similaridade de suporte — a da 3ª melhor avaliação distinta —, usada para **calibrar o limiar** que separa o que responder do que recusar. `--write` grava o limiar no manifesto do índice; `--e2e` roda o pipeline completo e mostra qual barreira recusou cada pergunta.
 
-### Resultados já medidos (backend offline, sem LLM)
+### Resultados (configuração final)
 
-Os números em [`eval/resultado.md`](eval/resultado.md) foram medidos sobre a base real com o backend **offline** (`lsa`) e geração **extrativa**:
+Medidos em 16/11/2026 sobre a base real (38.287 avaliações), com `intfloat/multilingual-e5-small` e o LLM `nvidia/nemotron-3-ultra-550b-a55b:free` via OpenRouter. Saída completa em [`eval/resultado.md`](eval/resultado.md).
 
-| Métrica | Sem foco nem expansão (`QUERY_FOCUS=off`) | Pipeline final |
+| Métrica | Backend offline (`lsa`), sem LLM, 25 perguntas | **e5 + LLM, 34 perguntas** |
 |---|---|---|
-| Filtros inferidos corretamente | 22/22 | 22/22 |
-| Relevância@k por termos (14 perguntas no escopo) | 0,61 | 0,74 |
-| Aceitar/recusar só com o limiar — barreira 1 (22 perguntas) | 77% | 86% |
-| Decisão ponta a ponta sem LLM (25 perguntas) | — | 18/25 |
+| Filtros inferidos corretamente | 22/22 | **30/30** |
+| Relevância@k por termos (perguntas no escopo) | 0,74 | **0,78** |
+| Aceitar/recusar só com o limiar — barreira 1 | 86% | **100%** (limiar calibrado: 0,875) |
+| Decisão ponta a ponta (responder × recusar) | 18/25 | **32/34** |
+| Perguntas fora do escopo recusadas | — | **10/10**, todas antes de chamar o LLM |
+| Perguntas do domínio sem resposta recusadas | — | **4/4** (3 na recuperação, 1 pelo LLM) |
 
-Leitura: a transformação da pergunta e a expansão por temas melhoram a recuperação de forma mensurável. Já o backend offline, que compara n-gramas de caracteres, **não separa bem o escopo** ("como funciona a fotossíntese" se parece com "não funciona") e, sem LLM, a barreira 2 não existe — por isso 7 das 25 decisões saem erradas. É a principal razão para o padrão do projeto ser embeddings semânticos + LLM.
+**Os dois erros, ambos recusas indevidas (nenhuma resposta sem fundamento):**
 
-### A fazer na configuração final (e5 + LLM)
+- *"Os clientes relatam problemas com reembolso ou estorno?"* — similaridade de suporte 0,875, exatamente sobre o limiar; no pipeline completo ficou um fio abaixo e foi recusada na recuperação.
+- *"Como os clientes avaliam o atendimento quando têm um problema?"* — chegou ao LLM, que respondeu `SEM_EVIDENCIA`. Em outra execução da mesma pergunta o modelo respondeu com 2 citações: o modelo gratuito não é determinístico mesmo com temperatura 0,1.
 
-> ⚠️ Os resultados com `multilingual-e5-small` e com um LLM real **ainda não foram medidos** neste repositório. Depois de indexar com o backend padrão e configurar o `.env`, rode:
->
-> ```bash
-> python -m voc_rag.cli eval --write --e2e   # calibra o limiar e mede a recusa ponta a ponta
-> python -m voc_rag.cli examples             # regenera docs/EXEMPLOS.md com respostas do LLM
-> ```
->
-> e atualize a tabela acima. O limiar inicial do e5 (0,80) é só um ponto de partida: similaridades de modelos E5 ficam comprimidas em uma faixa alta, e o valor certo depende da calibração.
+**Leitura.** O sistema erra para o lado seguro: nas 34 perguntas não houve nenhuma resposta a pergunta que deveria ser recusada. O ponto frágil é a **margem do limiar**: o menor suporte no escopo foi 0,875 e o maior fora do escopo, 0,874 ("receita de bolo de cenoura"). Similaridades do E5 ficam comprimidas numa faixa alta, então perguntas novas podem cair do lado errado. Um reranker cross-encoder (seção 11) daria uma pontuação com mais separação.
+
+Para reproduzir: `python -m voc_rag.cli eval --write --e2e` e `python -m voc_rag.cli examples`.
 
 ## 9. Exemplos de perguntas e respostas
 
-[`docs/EXEMPLOS.md`](docs/EXEMPLOS.md) traz dez perguntas com transformação, filtros, funil de recuperação, resposta e evidências — saída real do sistema, sem edição. A versão atual foi gerada em modo extrativo; regenere com `python -m voc_rag.cli examples` depois de configurar o LLM.
+[`docs/EXEMPLOS.md`](docs/EXEMPLOS.md) traz dez perguntas com transformação, filtros, funil de recuperação, resposta e evidências — saída real do sistema (e5 + `nvidia/nemotron-3-ultra-550b-a55b:free`), sem edição.
 
-Trecho (pergunta ampla, recuperação real):
+Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 
 > **Pergunta:** Quais são os principais problemas relatados pelos clientes?
 > **Filtros inferidos:** nota entre 1 e 3 · **Expandida em sub-buscas:** produto não recebido · devolução/reembolso · entrega incompleta · entrega atrasada · produto com defeito
+> **Recuperação:** 199 densos + 200 lexicais → 345 únicos → 262 acima do limiar → 12 no contexto
 >
-> - [1] nota 1 — “Meu pedido veio incompleto. Ficou faltando um item.”
-> - [2] nota 1 — “Ainda NAO recebi o produt. O Produto não chegou.”
-> - [3] nota 1 — “Quero o meu dinheiro de volta, não estou conseguindo cancelar”
-> - [4] nota 1 — “O relogio não esta funcionando. [...] Veio com defeito”
-> - [5] nota 3 — “Demorou muito para chegar”
+> - **Entrega incompleta / itens faltando** – 1.460 menções (10,4%); diversos relatos de pedidos com itens ausentes [2, 6, 7, 8].
+> - **Produto com defeito ou danificado** – 988 menções (7,0%); produtos recebidos quebrados ou sem funcionar [1, 4, 5, 11].
+>
+> [2] nota 2 — “Pedido incompleto. Meu pedido chegou faltando um item.”
+> [4] nota 1 — “Produto já veio com defeito não funciona”
 
 > **Pergunta:** Qual é a capital da França?
-> **Status:** sem evidência (recusa na recuperação, LLM não chamado) — apenas 2 avaliações atingiram a similaridade mínima; mínimo exigido: 3.
+> **Status:** sem evidência (recusa na recuperação, LLM não chamado) — 0 avaliações atingiram a similaridade mínima (maior encontrada: 0,82); mínimo exigido: 3.
+
+**Revisão manual das respostas.** As afirmações conferem com as avaliações citadas. A ressalva mais relevante: no exemplo 1 o modelo agrupa [9] e [12] como "não recebimento", mas pelos metadados esses pedidos chegaram atrasados — é o tipo de deslize que a validação estrutural de citações não pega (seção 11).
 
 ## 10. Decisões técnicas
 
@@ -240,7 +251,9 @@ Trecho (pergunta ampla, recuperação real):
 
 ## 11. Limitações e próximos passos
 
-- **Resultados finais pendentes.** A avaliação com e5 + LLM precisa ser rodada (seção 8).
+- **Margem estreita do limiar.** Com o e5-small, perguntas válidas e fora do escopo ficam separadas por 0,001 de similaridade de suporte (seção 8). Funciona no conjunto de avaliação, mas é sensível a perguntas novas.
+- **LLM gratuito não determinístico.** A mesma pergunta pode ser respondida numa execução e recusada em outra. Um modelo pago ou local, com temperatura 0, reduz a variação.
+- **UF só por filtro manual.** "Clientes de São Paulo" não vira filtro automaticamente; o estado é selecionado na barra lateral.
 - **Relevância medida por proxy.** Termos esperados não substituem um conjunto anotado por pessoas; anotar ~50 pares pergunta–avaliação permitiria medir precisão e recall de verdade.
 - **Validação de citações é estrutural.** Garante que a citação existe, não que a avaliação citada sustenta a frase. Um verificador (NLI ou LLM-juiz) seria o próximo passo.
 - **Temas por regras** têm falsos positivos e negativos; cerca de 36% das avaliações não recebem tema. As contagens são sempre apresentadas como aproximadas.
@@ -252,7 +265,9 @@ Trecho (pergunta ampla, recuperação real):
 ## 12. Estrutura do repositório
 
 ```text
-├── app/streamlit_app.py      # interface com evidências e rastro do pipeline
+├── web/                      # interface React (Vite + Tailwind + Recharts)
+│   └── src/pages/            # Ask.tsx (perguntas) · Dashboard.tsx (métricas)
+├── app/streamlit_app.py      # interface alternativa em Streamlit
 ├── src/voc_rag/
 │   ├── config.py             # parâmetros (via .env)
 │   ├── text.py               # limpeza e normalização
@@ -265,9 +280,11 @@ Trecho (pergunta ampla, recuperação real):
 │   ├── generator.py          # 5. contexto, prompt, validação de citações
 │   ├── pipeline.py           # orquestração e rastro
 │   ├── evaluation.py         # avaliação e calibração do limiar
+│   ├── api.py                # API FastAPI (serve também web/dist)
+│   ├── dashboard.py          # métricas da base, do uso e da avaliação
 │   └── cli.py                # prepare | index | ask | eval | examples
 ├── scripts/download_data.py
-├── eval/perguntas.json       # perguntas de avaliação  ·  eval/resultado.md
+├── eval/perguntas.json       # perguntas de avaliação  ·  eval/resultado.md e .json
 ├── tests/                    # pytest
 ├── docs/                     # EXEMPLOS.md · PLANO.md · ROTEIRO_VIDEO.md
 └── data/                     # raw/, processed/, index/ (gerados; fora do git)

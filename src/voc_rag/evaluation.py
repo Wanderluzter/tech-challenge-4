@@ -33,30 +33,53 @@ def _best_threshold(inside: list[float], outside: list[float]) -> tuple[float, f
     return best
 
 
-def run_e2e(settings: Settings, questions_path: Path) -> str:
-    """Roda o pipeline completo (com o LLM configurado) e mostra quem recusou o quê."""
+def run_e2e(settings: Settings, questions_path: Path) -> dict:
+    """Roda o pipeline completo (com o LLM configurado) e registra quem recusou o quê."""
     from .pipeline import RagPipeline
 
     questions = json.loads(Path(questions_path).read_text(encoding="utf-8"))
     pipeline = RagPipeline(settings)
-    lines = [
-        f"Ponta a ponta — geração: `{pipeline.generator.provider}`, "
-        f"limiar {pipeline.retriever.min_similarity}",
-        "",
-        "| Pergunta | Esperado | Obtido | Etapa da recusa | Citações | Correto |",
-        "|---|---|---|---|---|---|",
-    ]
-    right = 0
+    rows = []
     for item in questions:
         result = pipeline.ask(item["pergunta"])
         expected = "responder" if item["no_escopo"] else "recusar"
         got = "responder" if result.status == "ok" else "recusar"
-        right += expected == got
-        lines.append(
-            f"| {item['pergunta']} | {expected} | {got} | {result.refusal_stage or '—'} | "
-            f"{len(result.cited_refs)} | {'✓' if expected == got else '✗'} |"
+        rows.append(
+            {
+                "pergunta": item["pergunta"],
+                "tipo": item.get("tipo") or ("no_escopo" if item["no_escopo"] else "fora_do_escopo"),
+                "esperado": expected,
+                "obtido": got,
+                "etapa_recusa": result.refusal_stage,
+                "citacoes": len(result.cited_refs),
+                "correto": expected == got,
+            }
         )
-    lines.insert(1, f"Decisão correta (responder x recusar): **{right}/{len(questions)}**")
+    model = pipeline.settings.llm_model if pipeline.generator.provider != "extractive" else ""
+    return {
+        "provedor": pipeline.generator.provider,
+        "modelo": model,
+        "limiar": pipeline.retriever.min_similarity,
+        "corretas": sum(r["correto"] for r in rows),
+        "perguntas": len(rows),
+        "linhas": rows,
+    }
+
+
+def e2e_to_markdown(e2e: dict) -> str:
+    model = f" / `{e2e['modelo']}`" if e2e["modelo"] else ""
+    lines = [
+        f"Ponta a ponta — geração: `{e2e['provedor']}`{model}, limiar {e2e['limiar']}",
+        f"Decisão correta (responder x recusar): **{e2e['corretas']}/{e2e['perguntas']}**",
+        "",
+        "| Pergunta | Esperado | Obtido | Etapa da recusa | Citações | Correto |",
+        "|---|---|---|---|---|---|",
+    ]
+    for r in e2e["linhas"]:
+        lines.append(
+            f"| {r['pergunta']} | {r['esperado']} | {r['obtido']} | {r['etapa_recusa'] or '—'} | "
+            f"{r['citacoes']} | {'✓' if r['correto'] else '✗'} |"
+        )
     return "\n".join(lines) + "\n"
 
 

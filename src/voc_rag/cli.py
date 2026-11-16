@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 from .config import ROOT, Settings
@@ -95,9 +96,16 @@ def main(argv: list[str] | None = None) -> int:
         report = evaluation.to_markdown(summary)
         if args.write:
             settings = Settings()
+        structured = {"gerado_em": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                      "recuperacao": summary, "ponta_a_ponta": None}
         if args.e2e:
-            report += "\n" + evaluation.run_e2e(settings, Path(args.questions))
+            structured["ponta_a_ponta"] = evaluation.run_e2e(settings, Path(args.questions))
+            report += "\n" + evaluation.e2e_to_markdown(structured["ponta_a_ponta"])
         Path(args.out).write_text(report, encoding="utf-8")
+        # versão estruturada, lida pelo dashboard de qualidade
+        Path(args.out).with_suffix(".json").write_text(
+            json.dumps(structured, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
         print(report)
         if args.write:
             print(f"Limiar {summary['limiar_sugerido']} gravado em {settings.manifest_path}")

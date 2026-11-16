@@ -8,3 +8,7 @@ data/processed/*
 data/index/
 !data/**/.gitkeep
 .DS_Store
+data/logs/
+web/node_modules/
+web/dist/
+*.tsbuildinfo
