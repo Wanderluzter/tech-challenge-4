@@ -33,17 +33,44 @@ def _best_threshold(inside: list[float], outside: list[float]) -> tuple[float, f
     return best
 
 
+FALLBACK = "extractive_fallback"
+
+
+def ask_with_retry(pipeline, question: str, attempts: int = 4, wait_s: float = 30.0):
+    """Pergunta ao pipeline repetindo quando o LLM falha (ex.: 429).
+
+    Na interface, uma falha do LLM cai no modo extrativo; numa medição isso contaria como
+    "respondida" sem o modelo ter decidido nada. Aqui a pergunta é refeita e, se o LLM
+    continuar indisponível, o resultado volta marcado como fallback.
+    """
+    import sys
+    import time
+
+    result = pipeline.ask(question)
+    for attempt in range(1, attempts):
+        if result.provider != FALLBACK:
+            break
+        print(f"  LLM indisponível; nova tentativa em {wait_s:.0f}s ({attempt}/{attempts - 1})", file=sys.stderr)
+        time.sleep(wait_s)
+        result = pipeline.ask(question)
+    return result
+
+
 def run_e2e(settings: Settings, questions_path: Path) -> dict:
     """Roda o pipeline completo (com o LLM configurado) e registra quem recusou o quê."""
+    import sys
+
     from .pipeline import RagPipeline
 
     questions = json.loads(Path(questions_path).read_text(encoding="utf-8"))
     pipeline = RagPipeline(settings)
     rows = []
-    for item in questions:
-        result = pipeline.ask(item["pergunta"])
+    for i, item in enumerate(questions, start=1):
+        print(f"[{i}/{len(questions)}] {item['pergunta']}", file=sys.stderr)
+        result = ask_with_retry(pipeline, item["pergunta"])
+        failed = result.provider == FALLBACK
         expected = "responder" if item["no_escopo"] else "recusar"
-        got = "responder" if result.status == "ok" else "recusar"
+        got = "erro_llm" if failed else ("responder" if result.status == "ok" else "recusar")
         rows.append(
             {
                 "pergunta": item["pergunta"],
@@ -62,6 +89,7 @@ def run_e2e(settings: Settings, questions_path: Path) -> dict:
         "limiar": pipeline.retriever.min_similarity,
         "corretas": sum(r["correto"] for r in rows),
         "perguntas": len(rows),
+        "falhas_llm": sum(r["obtido"] == "erro_llm" for r in rows),
         "linhas": rows,
     }
 
@@ -72,6 +100,11 @@ def e2e_to_markdown(e2e: dict) -> str:
         f"Ponta a ponta — geração: `{e2e['provedor']}`{model}, limiar {e2e['limiar']}",
         f"Decisão correta (responder x recusar): **{e2e['corretas']}/{e2e['perguntas']}**",
         "",
+    ]
+    if e2e.get("falhas_llm"):
+        lines += [f"> Aviso: o LLM ficou indisponível em {e2e['falhas_llm']} pergunta(s) (`erro_llm`); "
+                  "o resultado dessas perguntas não mede o sistema. Rode de novo.", ""]
+    lines += [
         "| Pergunta | Esperado | Obtido | Etapa da recusa | Citações | Correto |",
         "|---|---|---|---|---|---|",
     ]

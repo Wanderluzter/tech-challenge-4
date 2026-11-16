@@ -40,8 +40,12 @@ flowchart TD
         C --> F[(Parquet<br/>texto, metadados, BM25)]
     end
 
+    subgraph Interface ["Interface"]
+        W[React<br/>Perguntar + Dashboard] -- HTTP --> API[API FastAPI<br/>api.py]
+    end
+
     subgraph Consulta ["Consulta (a cada pergunta)"]
-        Q[Pergunta do usuário] --> T[Transformação<br/>foco no assunto +<br/>filtros inferidos]
+        Q[Pergunta do usuário<br/>+ filtros manuais] --> T[Transformação<br/>foco no assunto +<br/>filtros inferidos]
         T --> X{Pergunta ampla?}
         X -- sim --> S[Sub-buscas pelos temas<br/>mais frequentes do recorte]
         X -- não --> R
@@ -57,9 +61,15 @@ flowchart TD
         V -- sim --> O[Resposta + evidências<br/>+ rastro do pipeline]
     end
 
+    API --> Q
+    O --> API
+    N --> API
+    N2 --> API
     E -.-> R
     F -.-> R
     F -.-> P
+    F -.-> D2[(Métricas do<br/>dashboard)]
+    D2 -.-> API
 ```
 
 | Camada | Tecnologia | Papel |
@@ -74,7 +84,7 @@ flowchart TD
 
 ## 3. Como executar
 
-Requisitos: Python 3.10+ (testado em 3.13) e alguns GB de disco para as dependências (PyTorch), o modelo de embeddings e o índice.
+Requisitos: Python 3.10+ (testado em 3.12), Node 18+ para a interface React (testado em 22) e alguns GB de disco para as dependências (PyTorch), o modelo de embeddings e o índice.
 
 ```bash
 git clone https://github.com/Wanderluzter/tech-challenge-4.git
@@ -191,9 +201,9 @@ A recusa informa em que etapa ocorreu e por quê.
 
 ### Resultados (configuração final)
 
-Medidos em 16/11/2026 sobre a base real (38.287 avaliações), com `intfloat/multilingual-e5-small` e o LLM `nvidia/nemotron-3-ultra-550b-a55b:free` via OpenRouter. Saída completa em [`eval/resultado.md`](eval/resultado.md).
+Medidos em 16/11/2026 sobre a base real (38.287 avaliações), com `intfloat/multilingual-e5-small` e o LLM `gemini-3.5-flash` (API do Google, camada gratuita). Saída completa em [`eval/resultado.md`](eval/resultado.md); a aba *Qualidade* do dashboard lê a mesma execução. Uma rodada anterior com outro LLM, `nvidia/nemotron-3-ultra-550b-a55b:free` (via OpenRouter), deu o mesmo placar, 32/34, com os mesmos dois erros.
 
-| Métrica | Backend offline (`lsa`), sem LLM, 25 perguntas | **e5 + LLM, 34 perguntas** |
+| Métrica | Backend offline (`lsa`), sem LLM, 25 perguntas | **e5 + Gemini, 34 perguntas** |
 |---|---|---|
 | Filtros inferidos corretamente | 22/22 | **30/30** |
 | Relevância@k por termos (perguntas no escopo) | 0,74 | **0,78** |
@@ -205,15 +215,15 @@ Medidos em 16/11/2026 sobre a base real (38.287 avaliações), com `intfloat/mul
 **Os dois erros, ambos recusas indevidas (nenhuma resposta sem fundamento):**
 
 - *"Os clientes relatam problemas com reembolso ou estorno?"* — similaridade de suporte 0,875, exatamente sobre o limiar; no pipeline completo ficou um fio abaixo e foi recusada na recuperação.
-- *"Como os clientes avaliam o atendimento quando têm um problema?"* — chegou ao LLM, que respondeu `SEM_EVIDENCIA`. Em outra execução da mesma pergunta o modelo respondeu com 2 citações: o modelo gratuito não é determinístico mesmo com temperatura 0,1.
+- *"Como os clientes avaliam o atendimento quando têm um problema?"* — chegou ao LLM, que respondeu `SEM_EVIDENCIA`. As avaliações recuperadas falam de atendimento ruim, mas pouco de *como* o cliente avalia o atendimento diante de um problema; os dois modelos foram conservadores aqui (o Nemotron chegou a responder com 2 citações em uma execução e a recusar em outra).
 
 **Leitura.** O sistema erra para o lado seguro: nas 34 perguntas não houve nenhuma resposta a pergunta que deveria ser recusada. O ponto frágil é a **margem do limiar**: o menor suporte no escopo foi 0,875 e o maior fora do escopo, 0,874 ("receita de bolo de cenoura"). Similaridades do E5 ficam comprimidas numa faixa alta, então perguntas novas podem cair do lado errado. Um reranker cross-encoder (seção 11) daria uma pontuação com mais separação.
 
-Para reproduzir: `python -m voc_rag.cli eval --write --e2e` e `python -m voc_rag.cli examples`.
+Para reproduzir: `python -m voc_rag.cli eval --write --e2e` e `python -m voc_rag.cli examples`. Se o LLM ficar indisponível (limite de requisições), a avaliação tenta de novo e, persistindo a falha, marca a pergunta como `erro_llm` em vez de contá-la como respondida; o `examples` não sobrescreve o arquivo.
 
 ## 9. Exemplos de perguntas e respostas
 
-[`docs/EXEMPLOS.md`](docs/EXEMPLOS.md) traz dez perguntas com transformação, filtros, funil de recuperação, resposta e evidências — saída real do sistema (e5 + `nvidia/nemotron-3-ultra-550b-a55b:free`), sem edição.
+[`docs/EXEMPLOS.md`](docs/EXEMPLOS.md) traz dez perguntas com transformação, filtros, funil de recuperação, resposta e evidências — saída real do sistema, sem edição. Foi gerado com o Nemotron (`nvidia/nemotron-3-ultra-550b-a55b:free`); a regeneração com o Gemini parou no limite diário da camada gratuita, e o comando não sobrescreve o arquivo nesse caso.
 
 Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 

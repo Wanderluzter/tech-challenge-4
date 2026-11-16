@@ -130,7 +130,10 @@ function EvidenceCard({ ev, cited, active }: { ev: Evidence; cited: boolean; act
         <span>{fmt.category(ev.categoria)}</span>
         <span>{ev.uf}</span>
         <span>entrega: {DELIVERY[ev.entrega_status] ?? ev.entrega_status}{delay}</span>
-        <span className="font-mono">{ev.review_id.slice(0, 10)}…</span>
+        <span className="tabular" title="Posição da avaliação em cada busca antes da fusão (RRF)">
+          rank vetorial {ev.dense_rank ?? "—"} · rank BM25 {ev.bm25_rank ?? "—"}
+        </span>
+        <span className="font-mono" title={ev.review_id}>{ev.review_id.slice(0, 10)}…</span>
       </div>
     </article>
   );

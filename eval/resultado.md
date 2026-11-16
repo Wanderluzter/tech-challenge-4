@@ -38,7 +38,7 @@ Backend de embeddings: `intfloat/multilingual-e5-small` — 30 perguntas.
 | Como declarar o imposto de renda? | não | ✓ | — | 0.864 | 0.861 |
 | Quem é o presidente dos Estados Unidos? | não | ✓ | — | 0.837 | 0.832 |
 
-Ponta a ponta — geração: `openai_compat`, limiar 0.875
+Ponta a ponta — geração: `openai_compat` / `gemini-3.5-flash`, limiar 0.875
 Decisão correta (responder x recusar): **32/34**
 
 | Pergunta | Esperado | Obtido | Etapa da recusa | Citações | Correto |
@@ -48,20 +48,20 @@ Decisão correta (responder x recusar): **32/34**
 | O que os clientes mais elogiam em suas experiências de compra? | responder | responder | — | 12 | ✓ |
 | Quais problemas são relatados por clientes insatisfeitos? | responder | responder | — | 12 | ✓ |
 | Existem padrões recorrentes nas avaliações relacionadas à qualidade dos produtos? | responder | responder | — | 12 | ✓ |
-| O que os clientes relatam sobre problemas relacionados à entrega? | responder | responder | — | 11 | ✓ |
-| Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega? | responder | responder | — | 11 | ✓ |
+| O que os clientes relatam sobre problemas relacionados à entrega? | responder | responder | — | 10 | ✓ |
+| Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega? | responder | responder | — | 12 | ✓ |
 | Quais são os principais problemas relatados nas avaliações com nota baixa? | responder | responder | — | 12 | ✓ |
 | O que os clientes mais elogiam na categoria beleza e saúde? | responder | responder | — | 12 | ✓ |
 | Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias? | responder | responder | — | 7 | ✓ |
-| Clientes reclamam de produto recebido com defeito ou quebrado? | responder | responder | — | 12 | ✓ |
-| Há relatos de clientes que receberam um produto diferente do que compraram? | responder | responder | — | 2 | ✓ |
+| Clientes reclamam de produto recebido com defeito ou quebrado? | responder | responder | — | 11 | ✓ |
+| Há relatos de clientes que receberam um produto diferente do que compraram? | responder | responder | — | 12 | ✓ |
 | Como os clientes avaliam o atendimento quando têm um problema? | responder | recusar | geracao | 0 | ✗ |
-| Os clientes reclamam de pedidos que chegaram incompletos? | responder | responder | — | 11 | ✓ |
+| Os clientes reclamam de pedidos que chegaram incompletos? | responder | responder | — | 12 | ✓ |
 | Os clientes reclamam do aplicativo de celular da loja? | responder | responder | — | 1 | ✓ |
 | Quais dificuldades os clientes relatam ao pedir troca ou devolução? | responder | responder | — | 10 | ✓ |
 | Os clientes relatam problemas com reembolso ou estorno? | responder | recusar | recuperacao | 0 | ✗ |
-| O que os clientes dizem sobre a embalagem dos produtos? | responder | responder | — | 10 | ✓ |
-| Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso? | responder | responder | — | 9 | ✓ |
+| O que os clientes dizem sobre a embalagem dos produtos? | responder | responder | — | 9 | ✓ |
+| Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso? | responder | responder | — | 8 | ✓ |
 | Quais elogios os clientes fazem aos produtos de cama, mesa e banho? | responder | responder | — | 12 | ✓ |
 | Qual é a capital da França? | recusar | recusar | recuperacao | 0 | ✓ |
 | Explique como funciona a fotossíntese. | recusar | recusar | recuperacao | 0 | ✓ |

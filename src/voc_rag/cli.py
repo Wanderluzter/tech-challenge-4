@@ -126,9 +126,15 @@ def main(argv: list[str] | None = None) -> int:
             f"- Limiar de similaridade: {pipeline.retriever.min_similarity}",
             "",
         ]
+        from .evaluation import FALLBACK, ask_with_retry
+
         for i, question in enumerate(EXAMPLE_QUESTIONS, start=1):
             print(f"[{i}/{len(EXAMPLE_QUESTIONS)}] {question}", file=sys.stderr)
-            parts += [f"## {i}. {question}", "", render_answer(pipeline.ask(question)), "---", ""]
+            result = ask_with_retry(pipeline, question)
+            if result.provider == FALLBACK:
+                print("LLM indisponível; EXEMPLOS.md não foi reescrito.", file=sys.stderr)
+                return 1
+            parts += [f"## {i}. {question}", "", render_answer(result), "---", ""]
         Path(args.out).write_text("\n".join(parts), encoding="utf-8")
         print(f"Escrito em {args.out}")
     return 0
