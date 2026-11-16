@@ -12,7 +12,7 @@ Situação em 16/11/2026: **todos os requisitos técnicos estão prontos e medid
 | 4. Perguntas sem evidência suficiente | Pronto e medido: 14/14 recusas corretas; 32/34 decisões corretas no total | README §6 e §8, Dashboard › Qualidade |
 | Adicional: metadados | Pronto: nota, ano, categoria, situação da entrega e UF, inferidos ou manuais | README §7 |
 | Entregável: repositório com README | Pronto, **faltam equipe e link do vídeo** no topo | `README.md` |
-| Entregável: vídeo de até 7 min | Roteiro pronto para a interface React; **gravação pendente** | `docs/ROTEIRO_VIDEO.md` |
+| Entregável: vídeo de até 7 min | Roteiro de 4:50 alinhado aos itens do enunciado e à apresentação (11 slides); **gravação pendente** | `docs/ROTEIRO_VIDEO.md` |
 
 ## O que falta
 
