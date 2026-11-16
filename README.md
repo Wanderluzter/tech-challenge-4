@@ -55,7 +55,7 @@ flowchart TD
         G -- não --> N[Recusa<br/>LLM não é chamado]
         G -- sim --> M[Diversificação MMR<br/>top-k]
         M --> P[Contexto<br/>evidências numeradas<br/>+ panorama do recorte]
-        P --> L[LLM<br/>responde citando n]
+        P --> L[LLM via chain LCEL<br/>prompt, ChatOpenAI, parser<br/>responde citando n]
         L --> V{Citações válidas?}
         V -- não --> N2[Recusa / resposta descartada]
         V -- sim --> O[Resposta + evidências<br/>+ rastro do pipeline]
@@ -78,9 +78,11 @@ flowchart TD
 | Embeddings | `intfloat/multilingual-e5-small` (sentence-transformers) | Vetores de 384 dimensões, multilíngue, roda em CPU |
 | Banco vetorial | ChromaDB (persistente, HNSW, cosseno) | Busca densa com filtro de metadados |
 | Busca lexical | rank-bm25 | Termos exatos; complementa a busca densa |
-| Geração | Qualquer API compatível com OpenAI (OpenAI, Gemini, Groq, Ollama...) | Síntese com citações |
+| Orquestração | **LangGraph** (`StateGraph`) | Fluxo como grafo de estado: nós `interpretar → recuperar → gerar`, com as recusas como arestas condicionais |
+| Geração | **LangChain** (LCEL: `ChatPromptTemplate \| ChatOpenAI \| StrOutputParser`) sobre qualquer API compatível com OpenAI (Gemini, OpenAI, Groq, Ollama...) | Síntese com citações; uma chain por modelo, com fallback entre modelos |
+| Observabilidade | LangSmith (opcional, via `.env`) | Trace de cada pergunta: nós do grafo, chain, latência |
 | Interface | React + Vite + Tailwind + Recharts, servida por FastAPI; Streamlit e CLI como alternativas | Perguntas com evidências e rastro do pipeline; dashboard de métricas |
-| Testes | pytest | 46 testes, sem download de modelo nem chave de API |
+| Testes | pytest | 49 testes, sem download de modelo nem chave de API |
 
 ## 3. Como executar
 
@@ -146,7 +148,7 @@ Código: [`src/voc_rag/data_prep.py`](src/voc_rag/data_prep.py). O funil abaixo 
 
 ## 5. Pipeline RAG
 
-Código: [`query.py`](src/voc_rag/query.py) → [`retriever.py`](src/voc_rag/retriever.py) → [`generator.py`](src/voc_rag/generator.py), orquestrados em [`pipeline.py`](src/voc_rag/pipeline.py). Cada etapa aparece no painel "Como chegamos aqui" da interface.
+Código: [`query.py`](src/voc_rag/query.py) → [`retriever.py`](src/voc_rag/retriever.py) → [`generator.py`](src/voc_rag/generator.py), orquestrados em [`pipeline.py`](src/voc_rag/pipeline.py) por um grafo do **LangGraph** (`interpretar → recuperar → gerar`; as recusas antes do LLM são arestas condicionais para o fim do grafo). Cada etapa aparece no painel "Como chegamos aqui" da interface.
 
 **1. Transformação da pergunta.**
 - *Foco no assunto.* Gestores perguntam em linguagem analítica ("quais padrões recorrentes aparecem nas avaliações relacionadas a...") e clientes escrevem relatos ("não recebi meu produto"). O vocabulário analítico é removido do texto de busca: `"O que os clientes relatam sobre problemas relacionados à entrega?"` → `"problemas entrega"`. A pergunta original, intacta, é a que vai para o LLM.
@@ -257,7 +259,10 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 | MMR + deduplicação | Top-k puro | A base tem milhares de comentários quase idênticos |
 | Recusa antes do LLM | Confiar só no prompt | Sem contexto não há o que alucinar, e não há custo |
 | Validação de citações pós-geração | Confiar no modelo | Garante que toda resposta exibida aponta para evidências existentes |
-| API compatível com OpenAI | SDK de um provedor | Um cliente só atende OpenAI, Gemini, Groq e Ollama |
+| API compatível com OpenAI via `ChatOpenAI` | SDK de um provedor (`ChatGoogleGenerativeAI`) | Uma chain só atende OpenAI, Gemini, Groq e Ollama; trocar de provedor é mudar o `.env` |
+| LangGraph para orquestrar | Uma função Python sequencial; agente ReAct | O fluxo é fixo e auditável (não há decisão do LLM sobre qual ferramenta usar), mas tem desvios: o grafo torna explícitos os dois pontos de recusa e cada nó aparece separado no trace do LangSmith |
+| Fallback entre modelos próprio | `Runnable.with_fallbacks` do LangChain | Mesmo princípio, mas guarda o estado de cada modelo (sem cota, com erro, em cooldown), que a interface mostra no seletor de modelo |
+| Busca híbrida própria sobre ChromaDB + BM25 | `EnsembleRetriever` do LangChain | Precisamos da similaridade de cada evidência (para o limiar de recusa), dos dois rankings para o rastro e de filtros iguais nas duas buscas |
 
 ## 11. Limitações e próximos passos
 
@@ -270,7 +275,8 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 - **Regras de filtro** cobrem os padrões de pergunta mais comuns; formulações incomuns ficam sem filtro (a busca semântica ainda funciona, e os filtros manuais estão na interface).
 - **Categoria do pedido** é a do primeiro item; pedidos com itens de categorias diferentes perdem essa nuance.
 - **Sem reranker.** Um cross-encoder multilíngue sobre os candidatos do RRF tende a melhorar a ordenação, ao custo de latência.
-- **Sem memória de conversa.** Cada pergunta é independente.
+- **Sem memória de conversa.** Cada pergunta é independente. O próximo passo seria um checkpointer do LangGraph (ou `RunnableWithMessageHistory`) para perguntas de acompanhamento.
+- **Avaliação de fidelidade estrutural.** As métricas são recall de filtros, relevância por termos e acerto de recusa; RAGAS (faithfulness, answer relevancy) com LLM-juiz completaria a avaliação, ao custo de chamadas extras ao modelo.
 
 ## 12. Estrutura do repositório
 
@@ -287,8 +293,8 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 │   ├── index.py              # 2. embeddings → ChromaDB
 │   ├── query.py              # 3. transformação da pergunta e filtros
 │   ├── retriever.py          # 4. busca híbrida, RRF, limiar, MMR
-│   ├── generator.py          # 5. contexto, prompt, validação de citações
-│   ├── pipeline.py           # orquestração e rastro
+│   ├── generator.py          # 5. contexto, chain LCEL (prompt | ChatOpenAI | parser), fallback, validação
+│   ├── pipeline.py           # grafo LangGraph (StateGraph) e rastro
 │   ├── evaluation.py         # avaliação e calibração do limiar
 │   ├── api.py                # API FastAPI (serve também web/dist)
 │   ├── dashboard.py          # métricas da base, do uso e da avaliação

@@ -3,12 +3,20 @@
 O modelo só enxerga as avaliações recuperadas, numeradas, e deve citar [n] em cada
 afirmação. Depois da geração, as citações são validadas contra o contexto: referência
 inexistente é removida e resposta sem nenhuma citação válida é descartada.
+
+A chamada ao LLM é uma chain LCEL do LangChain: `ChatPromptTemplate | ChatOpenAI |
+StrOutputParser`. `ChatOpenAI` fala com qualquer API compatível com OpenAI (Gemini,
+OpenRouter, Ollama), então trocar de provedor é só mudar o .env.
 """
 from __future__ import annotations
 
 import re
 from collections import Counter
 from dataclasses import dataclass, field
+
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import Runnable
 
 from .config import Settings
 from .retriever import Evidence
@@ -36,6 +44,8 @@ estiver fora do escopo (avaliações de clientes de e-commerce), comece a respos
 6. Se as evidências só cobrirem parte da pergunta, responda essa parte e diga explicitamente \
 o que não foi possível sustentar.
 7. Português do Brasil, direto, no máximo ~200 palavras, em tópicos curtos."""
+
+PROMPT = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{context}")])
 
 _DELIVERY = {"no_prazo": "no prazo", "atrasada": "atrasada", "nao_entregue": "sem entrega registrada"}
 _CITATION = re.compile(r"\[(\d+(?:\s*(?:,|e)\s*\d+)*)\]")
@@ -168,24 +178,37 @@ class Generator:
     def __init__(self, settings: Settings):
         self.settings = settings
         self.provider = settings.resolved_llm_provider()
-        self._client = None
         self.models: list[str] = []
         self.states: dict[str, ModelState] = {}
+        self._chains: dict[str, Runnable] = {}
         if self.provider == "openai_compat":
             if not settings.llm_model:
                 raise ValueError("Defina LLM_MODEL no .env (nome do modelo no seu provedor).")
-            from openai import OpenAI
-
-            self._client = OpenAI(
-                api_key=settings.llm_api_key or "sem-chave",  # Ollama e afins ignoram a chave
-                base_url=settings.llm_base_url,
-                timeout=settings.llm_timeout_s,
-                max_retries=0,  # quem decide repetir ou trocar de modelo é a cadeia abaixo
-            )
             self.models = settings.llm_models
             self.states = {m: ModelState() for m in self.models}
         elif self.provider != "extractive":
             raise ValueError(f"LLM_PROVIDER desconhecido: {self.provider!r}")
+
+    # ------------------------------------------------------------ chains LCEL
+    def _chat_model(self, model: str) -> Runnable:
+        from langchain_openai import ChatOpenAI
+
+        return ChatOpenAI(
+            model=model,
+            api_key=self.settings.llm_api_key or "sem-chave",  # Ollama e afins ignoram a chave
+            base_url=self.settings.llm_base_url,
+            temperature=self.settings.llm_temperature,
+            timeout=self.settings.llm_timeout_s,
+            max_retries=0,  # quem decide repetir ou trocar de modelo é a cadeia de fallback abaixo
+        )
+
+    def chain(self, model: str) -> Runnable:
+        """prompt | LLM | parser — uma chain por modelo, criada na primeira chamada."""
+        if model not in self._chains:
+            self._chains[model] = (PROMPT | self._chat_model(model) | StrOutputParser()).with_config(
+                run_name=f"gerar:{model}"
+            )
+        return self._chains[model]
 
     # ------------------------------------------------------------ estado dos modelos
     def _cooling(self, model: str) -> bool:
@@ -247,20 +270,12 @@ class Generator:
             if candidate != chain[0] and self._cooling(candidate) and candidate != chain[-1]:
                 continue  # em cooldown e ainda há outras opções
             try:
-                completion = self._client.chat.completions.create(
-                    model=candidate,
-                    temperature=self.settings.llm_temperature,
-                    messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": context},
-                    ],
-                )
+                raw = self.chain(candidate).invoke({"context": context}) or ""
             except APIError as error:
                 self._mark(candidate, error)
                 failures.append(f"{candidate}: {_describe_api_error(error)}")
                 continue
             self._mark(candidate, None)
-            raw = completion.choices[0].message.content or ""
             answer, status, cited, warnings = validate_answer(raw, len(evidences))
             if candidate != chain[0]:
                 warnings.insert(

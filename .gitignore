@@ -12,3 +12,5 @@ data/logs/
 web/node_modules/
 web/dist/
 *.tsbuildinfo
+# material das aulas (PDFs com marca d'água pessoal; não redistribuir)
+aulas_modulo_4/

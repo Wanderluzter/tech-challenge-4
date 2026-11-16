@@ -166,6 +166,17 @@ def test_validate_respects_model_refusal():
 
 
 # ---------------------------------------------------------------- ponta a ponta
+def _fake_chat_model(answer):
+    """Fábrica de modelos falsos no lugar do ChatOpenAI: `answer(modelo, mensagens) -> texto`."""
+    from langchain_core.messages import AIMessage
+    from langchain_core.runnables import RunnableLambda
+
+    def factory(model):
+        return RunnableLambda(lambda prompt: AIMessage(content=answer(model, prompt.to_messages())))
+
+    return factory
+
+
 @pytest.fixture(scope="module")
 def pipeline(settings) -> RagPipeline:
     return RagPipeline(settings)
@@ -219,15 +230,13 @@ def test_filters_without_matches_are_refused(pipeline):
 def test_model_refusal_is_propagated(pipeline, monkeypatch):
     """Pergunta do domínio sem resposta na base: a recuperação passa e o LLM recusa."""
 
-    class FakeCompletions:
-        def create(self, **kwargs):
-            assert "AVALIAÇÕES RECUPERADAS" in kwargs["messages"][1]["content"]
-            message = type("M", (), {"content": f"{NO_EVIDENCE_TAG}: nenhuma avaliação trata disso."})
-            return type("C", (), {"choices": [type("Ch", (), {"message": message})]})
+    def answer(model, messages):
+        assert "AVALIAÇÕES RECUPERADAS" in messages[1].content
+        return f"{NO_EVIDENCE_TAG}: nenhuma avaliação trata disso."
 
-    fake_client = type("Client", (), {"chat": type("Chat", (), {"completions": FakeCompletions()})})
     monkeypatch.setattr(pipeline.generator, "provider", "openai_compat")
-    monkeypatch.setattr(pipeline.generator, "_client", fake_client)
+    monkeypatch.setattr(pipeline.generator, "_chains", {})
+    monkeypatch.setattr(pipeline.generator, "_chat_model", _fake_chat_model(answer))
     result = pipeline.ask("Os clientes reclamam de produto com defeito?")
     assert result.status == "sem_evidencia" and result.refusal_stage == "geracao"
     assert result.cited_refs == [] and result.evidences  # evidências seguem visíveis para auditoria
@@ -264,12 +273,11 @@ def test_llm_failure_falls_back_to_evidences(pipeline):
     settings = dataclasses.replace(pipeline.settings, llm_provider="openai_compat", llm_api_key="x", llm_model="m")
     generator = Generator(settings)
 
-    class FailingCompletions:
-        def create(self, **_):
-            response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
-            raise RateLimitError("rate limited", response=response, body=None)
+    def answer(model, messages):
+        response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
+        raise RateLimitError("rate limited", response=response, body=None)
 
-    generator._client = type("Client", (), {"chat": type("Chat", (), {"completions": FailingCompletions()})()})()
+    generator._chat_model = _fake_chat_model(answer)
     result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
     assert result.evidences, "a pergunta de teste precisa recuperar evidências"
     generation = generator.generate(result.context, result.evidences)
@@ -338,16 +346,14 @@ def _generator_with(pipeline, models: list[str], failing: set[str]):
     generator = Generator(settings)
     calls: list[str] = []
 
-    class Completions:
-        def create(self, model, **_):
-            calls.append(model)
-            if model in failing:
-                response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
-                raise RateLimitError("sem cota", response=response, body=None)
-            message = type("M", (), {"content": f"- Produtos chegaram com defeito [1] (via {model})"})
-            return type("C", (), {"choices": [type("Ch", (), {"message": message})]})
+    def answer(model, messages):
+        calls.append(model)
+        if model in failing:
+            response = httpx.Response(429, request=httpx.Request("POST", "http://llm.test"))
+            raise RateLimitError("sem cota", response=response, body=None)
+        return f"- Produtos chegaram com defeito [1] (via {model})"
 
-    generator._client = type("Client", (), {"chat": type("Chat", (), {"completions": Completions()})})()
+    generator._chat_model = _fake_chat_model(answer)
     return generator, calls
 
 
@@ -383,3 +389,24 @@ def test_no_fallback_keeps_single_model(pipeline):
 def test_api_rejects_unknown_model(client):
     response = client.post("/api/ask", json={"question": "produto com defeito", "model": "nao-configurado"})
     assert response.status_code == 422
+
+
+# ----------------------------------------------------------------- LangChain / LangGraph
+def test_prompt_template_keeps_system_rules_and_context():
+    from voc_rag.generator import PROMPT, SYSTEM_PROMPT
+
+    messages = PROMPT.invoke({"context": "PERGUNTA: x {sem chaves}"}).to_messages()
+    assert messages[0].content == SYSTEM_PROMPT and messages[1].content == "PERGUNTA: x {sem chaves}"
+
+
+def test_graph_has_the_rag_steps_and_refusal_branches(pipeline):
+    graph = pipeline.graph.get_graph()
+    assert {"interpretar", "recuperar", "gerar"} <= set(graph.nodes)
+    edges = {(e.source, e.target) for e in graph.edges}
+    assert ("recuperar", "gerar") in edges and ("recuperar", "__end__") in edges
+
+
+def test_graph_stops_before_llm_on_empty_question(pipeline, monkeypatch):
+    monkeypatch.setattr(pipeline.retriever, "retrieve", lambda *a, **k: (_ for _ in ()).throw(AssertionError))
+    result = pipeline.ask("?")
+    assert result.status == "sem_evidencia" and result.refusal_reason == "Pergunta vazia."
