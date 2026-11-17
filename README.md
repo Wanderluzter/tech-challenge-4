@@ -2,7 +2,7 @@
 
 Tech Challenge — Fase 4 (FIAP POSTECH). Solução de **Voice of Customer Intelligence**: gestores perguntam em linguagem natural e recebem respostas geradas **somente** a partir das avaliações de clientes do [Brazilian E-Commerce Public Dataset by Olist](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce/data), com as avaliações que sustentam cada afirmação exibidas ao lado. Quando não há evidência suficiente, o sistema diz que não sabe.
 
-> **Equipe:** Leonardo Botelho (RM 370654) · Rafael Silva (RM 365112) · **Vídeo:** _preencher link_
+> **Equipe:** Leonardo Botelho (RM 370654) · Rafael Silva (RM 365112) · **Vídeo:** [youtu.be/_8rpNMXXeaM](https://youtu.be/_8rpNMXXeaM)
 
 ## Sumário
 
