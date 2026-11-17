@@ -1,0 +1,21 @@
+<section id="desafios" data-transition="fade">
+<p class="eyebrow">09 · Desafios e decisões técnicas</p>
+<h2>O que foi difícil e o que decidimos</h2>
+<div class="col">
+<p class="kicker">Similaridade de suporte (3ª melhor evidência) · zona cinzenta 0,865–0,884</p>
+<div class="strip">
+<div class="seg out"><p class="seg-t">Recusa direta: abaixo de 0,865</p></div>
+<div class="cut"></div>
+<div class="seg gray"><p class="seg-t">Zona cinzenta: o LLM decide</p></div>
+<div class="cut"></div>
+<div class="seg in"><p class="seg-t">Responde: a partir de 0,884</p></div>
+</div>
+<p class="small">Fora do escopo vai até 0,874 e no escopo começa em 0,875: margem de 0,001. Em vez de um corte no fio da navalha, a faixa ambígua vai ao LLM. Um reranker estreitaria essa faixa.</p>
+</div>
+<div class="rows">
+<div class="row"><h3>Gestor fala diferente do cliente</h3><p class="body">“Padrões recorrentes” contra “não recebi”: tiramos o vocabulário analítico da busca e expandimos perguntas amplas pelos temas mais frequentes.</p></div>
+<div class="row"><h3>Frequência</h3><p class="body">Top-k traz exemplos, não contagens: o modelo recebe uma contagem por temas, sempre apresentada como aproximada.</p></div>
+</div>
+<p class="pn">10</p>
+<aside>[4:10–4:35 · 25 s] O desafio mais difícil foi calibrar o “não sei”: perguntas válidas e fora do escopo se separavam por só 0,001 de similaridade. Em vez de um corte no fio da navalha, criamos uma zona cinzenta: abaixo do piso, recusa sem custo; na faixa ambígua, o LLM confirma se as avaliações tratam do assunto. Um reranker estreitaria essa faixa. Outro desafio foi a linguagem: o gestor pergunta “padrões recorrentes”, o cliente escreve “não recebi”, então a busca usa só o assunto.</aside>
+</section>

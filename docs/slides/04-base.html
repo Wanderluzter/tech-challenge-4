@@ -1,0 +1,17 @@
+<section id="base" data-transition="fade">
+<p class="eyebrow">03 · Construção da base de conhecimento</p>
+<h2>De 99 mil a 38 mil documentos</h2>
+<div class="bars">
+<div class="bar-row rise" style="--i:0"><p class="bar-label"><b>99.224</b> · arquivo original</p><div class="bar" style="width:1664px"></div></div>
+<div class="bar-row rise" style="--i:1"><p class="bar-label"><b>42.687</b> · com texto (−56.537 sem comentário: descartadas, não se inventa evidência)</p><div class="bar" style="width:716px"></div></div>
+<div class="bar-row rise" style="--i:2"><p class="bar-label"><b>42.370</b> · sem avaliações repetidas (−317)</p><div class="bar" style="width:711px"></div></div>
+<div class="bar-row rise" style="--i:3"><p class="bar-label"><b>38.287</b> · sem textos vazios como “ok” e “bom” (−4.083)</p><div class="bar hl" style="width:642px"></div></div>
+</div>
+<div class="notes3">
+<div><h3>Limpeza</h3><p class="body">Unicode normalizado, ruído e letras repetidas removidos; acentos preservados no texto vetorizado.</p></div>
+<div><h3>Documento</h3><p class="body">1 avaliação = 1 documento, sem chunking (mediana de 59 caracteres), com metadados do pedido.</p></div>
+<div><h3>Indexação</h3><p class="body">Embeddings multilingual-e5-small no ChromaDB (HNSW, cosseno) e índice BM25.</p></div>
+</div>
+<p class="pn">4</p>
+<aside>[0:40–0:55 · 15 s] Das 99 mil avaliações, 57 mil não têm texto: descartamos, porque preencher seria inventar evidência. Sem repetidas e sem textos vazios, ficam 38 mil. Limpamos o texto, cada avaliação vira um documento com os metadados do pedido, e indexamos com embeddings e5 no ChromaDB e no BM25.</aside>
+</section>

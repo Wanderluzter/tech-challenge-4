@@ -1,0 +1,20 @@
+<section id="recuperacao" data-transition="fade">
+<p class="eyebrow">05 · Recuperação e contexto</p>
+<h2>De 38 mil avaliações a 12 evidências</h2>
+<p class="kicker">Exemplo real: “Quais reclamações relacionadas à entrega aparecem com maior frequência?”</p>
+<div class="graph">
+<div class="node rise" style="--i:0"><p class="big">40 + 40</p><p class="body">candidatas: e5 no ChromaDB e BM25, com filtro nota 1–3</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node rise" style="--i:1"><p class="big">75</p><p class="body">únicas após a fusão dos rankings (RRF)</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node rise" style="--i:2"><p class="big">44</p><p class="body">acima do piso de similaridade 0,865</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node out rise" style="--i:3"><p class="big">12</p><p class="body">no contexto, após MMR e remoção de repetidas</p></div>
+</div>
+<div class="notes2">
+<div><h3>Contexto enviado ao modelo</h3><p class="b24">As 12 avaliações numeradas [1]…[12], cada uma com nota, data, categoria e situação da entrega, mais uma contagem por temas do recorte.</p></div>
+<div><h3>Por que metadados</h3><p class="b24">“Reclamações” vira filtro de nota antes da busca, e “entrega atrasada” vem das datas do pedido, não do texto: a busca fica mais precisa.</p></div>
+</div>
+<p class="pn">6</p>
+<aside>[1:20–1:50 · 30 s] Na prática, para esta pergunta: “reclamações” vira o filtro nota 1 a 3. A busca vetorial com e5 e o BM25 trazem 40 candidatas cada; a fusão RRF deixa 75; 44 passam do piso de similaridade; o MMR escolhe 12 diferentes entre si. O contexto leva as 12 avaliações numeradas com metadados, mais uma contagem por temas, porque top-k traz exemplos, não frequência.</aside>
+</section>

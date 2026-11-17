@@ -1,0 +1,23 @@
+<section id="arquitetura" data-transition="fade">
+<p class="eyebrow">04 · Arquitetura do pipeline RAG</p>
+<h2>Um grafo LangGraph de três nós</h2>
+<div class="graph">
+<div class="node rise" style="--i:0"><p class="name">interpretar</p><p class="body">Processamento da pergunta: foco no assunto e filtros</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node rise" style="--i:1"><p class="name">recuperar</p><p class="body">Embeddings, recuperação híbrida e seleção</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node rise" style="--i:2"><p class="name">gerar</p><p class="body">Construção do contexto e geração com o LLM</p></div>
+<x-shape kind="arrow-right" class="arrow"></x-shape>
+<div class="node out rise" style="--i:3"><p class="name">resposta</p><p class="body">Fundamentada: cada afirmação cita [n]</p></div>
+<div></div>
+<div></div>
+<div class="exit rise" style="--i:4"><p class="t">↓ <b>suporte abaixo do piso</b></p><p class="t">recusa sem chamar o LLM, com perguntas sugeridas</p></div>
+<div></div>
+<div class="exit rise" style="--i:5"><p class="t">↓ <b>SEM_EVIDENCIA ou nenhuma citação válida</b></p><p class="t">recusada ou descartada; na zona cinzenta, o LLM confirma a relevância</p></div>
+<div></div>
+<div></div>
+</div>
+<p class="stack">LangGraph (StateGraph) · LangChain LCEL (prompt → ChatOpenAI → parser) · e5-small + ChromaDB + BM25 · Gemini via API compatível com OpenAI, com troca automática de modelo · FastAPI + React</p>
+<p class="pn">5</p>
+<aside>[0:55–1:20 · 25 s] O fluxo pedido no desafio vira um grafo do LangGraph com três nós. Interpretar faz o processamento da pergunta. Recuperar cuida de embeddings, busca e seleção. Gerar monta o contexto e chama o LLM por uma chain LCEL do LangChain. As duas saídas para baixo são o centro do projeto: evidência claramente fraca termina antes do LLM; evidência limítrofe segue para o LLM confirmar se trata do assunto; resposta sem citação válida é descartada.</aside>
+</section>

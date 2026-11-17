@@ -1,0 +1,12 @@
+<section id="barreiras" data-transition="fade">
+<p class="eyebrow">07 · Perguntas sem evidência suficiente</p>
+<h2>Sem evidência, o sistema não responde</h2>
+<div class="cards">
+<div class="card rise" style="--i:0"><p class="n">Nó recuperar</p><h3>Nenhuma avaliação relevante ou fora do escopo</h3><p class="body">Abaixo do piso 0,865, recusa sem chamar o LLM. Entre 0,865 e 0,884, o LLM confirma se as avaliações tratam do assunto.</p></div>
+<div class="card rise" style="--i:1"><p class="n">Nó gerar · prompt</p><h3>Evidência recuperada, mas insuficiente</h3><p class="body">O modelo responde SEM_EVIDENCIA quando nenhuma avaliação trata da pergunta; com cobertura parcial, responde só a parte sustentada.</p></div>
+<div class="card rise" style="--i:2"><p class="n">Nó gerar · validação</p><h3>Afirmação sem suporte</h3><p class="body">Citações inexistentes são removidas; resposta sem citação válida é descartada.</p></div>
+</div>
+<p class="small">A recusa informa a etapa e o motivo, mostra os temas que a base cobre e sugere perguntas que ela sabe responder.</p>
+<p class="pn">8</p>
+<aside>[3:25–3:45 · 20 s] O desafio pede três situações, e cada uma tem uma barreira no grafo. Nada relevante ou fora do escopo: o piso corta antes do LLM. Evidência insuficiente ou limítrofe: o modelo confirma se ela trata do assunto e, se não, recusa. Afirmação sem suporte: a validação descarta respostas sem citação válida.</aside>
+</section>
