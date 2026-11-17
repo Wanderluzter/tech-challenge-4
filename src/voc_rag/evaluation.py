@@ -33,6 +33,27 @@ def _best_threshold(inside: list[float], outside: list[float]) -> tuple[float, f
     return best
 
 
+def _gray_zone(inside: list[float], outside: list[float], margin: float) -> tuple[float, float]:
+    """Piso e limiar de confiança da zona cinzenta.
+
+    Piso: menor suporte no escopo menos a margem (nenhuma pergunta válida é recusada direto).
+    Confiança: maior suporte fora do escopo mais a margem (nenhuma fora do escopo passa sem o
+    LLM confirmar). O que cai entre os dois vai para o LLM decidir.
+    """
+    threshold, _ = _best_threshold(inside, outside)
+    if not inside or not outside:
+        return threshold, threshold
+    floor = min(round(min(inside) - margin, 3), threshold)
+    confident = max(round(max(outside) + margin, 3), threshold)
+    return floor, confident
+
+
+def _zone(support: float, floor: float, confident: float) -> str:
+    if support < floor:
+        return "recusa direta"
+    return "zona cinzenta" if support < confident else "confiante"
+
+
 FALLBACK = "extractive_fallback"
 
 
@@ -79,6 +100,8 @@ def run_e2e(settings: Settings, questions_path: Path) -> dict:
                 "esperado": expected,
                 "obtido": got,
                 "etapa_recusa": result.refusal_stage,
+                "zona": _zone(result.retrieval.support_similarity, result.retrieval.min_similarity,
+                              result.retrieval.confident_similarity),
                 "citacoes": len(result.cited_refs),
                 "correto": expected == got,
             }
@@ -88,6 +111,8 @@ def run_e2e(settings: Settings, questions_path: Path) -> dict:
         "provedor": pipeline.generator.provider,
         "modelo": model,
         "limiar": pipeline.retriever.min_similarity,
+        "limiar_confianca": pipeline.retriever.confident_similarity,
+        "chamadas_llm": sum(r["etapa_recusa"] != "recuperacao" for r in rows),
         "corretas": sum(r["correto"] for r in rows),
         "perguntas": len(rows),
         "falhas_llm": sum(r["obtido"] == "erro_llm" for r in rows),
@@ -98,20 +123,22 @@ def run_e2e(settings: Settings, questions_path: Path) -> dict:
 def e2e_to_markdown(e2e: dict) -> str:
     model = f" / `{e2e['modelo']}`" if e2e["modelo"] else ""
     lines = [
-        f"Ponta a ponta — geração: `{e2e['provedor']}`{model}, limiar {e2e['limiar']}",
+        f"Ponta a ponta — geração: `{e2e['provedor']}`{model}, piso {e2e['limiar']}, "
+        f"limiar de confiança {e2e.get('limiar_confianca', e2e['limiar'])}",
         f"Decisão correta (responder x recusar): **{e2e['corretas']}/{e2e['perguntas']}**",
+        f"Perguntas que chegaram ao LLM: {e2e.get('chamadas_llm', '—')}/{e2e['perguntas']}",
         "",
     ]
     if e2e.get("falhas_llm"):
         lines += [f"> Aviso: o LLM ficou indisponível em {e2e['falhas_llm']} pergunta(s) (`erro_llm`); "
                   "o resultado dessas perguntas não mede o sistema. Rode de novo.", ""]
     lines += [
-        "| Pergunta | Esperado | Obtido | Etapa da recusa | Citações | Correto |",
-        "|---|---|---|---|---|---|",
+        "| Pergunta | Esperado | Obtido | Zona | Etapa da recusa | Citações | Correto |",
+        "|---|---|---|---|---|---|---|",
     ]
     for r in e2e["linhas"]:
         lines.append(
-            f"| {r['pergunta']} | {r['esperado']} | {r['obtido']} | {r['etapa_recusa'] or '—'} | "
+            f"| {r['pergunta']} | {r['esperado']} | {r['obtido']} | {r.get('zona', '—')} | {r['etapa_recusa'] or '—'} | "
             f"{r['citacoes']} | {'✓' if r['correto'] else '✗'} |"
         )
     return "\n".join(lines) + "\n"
@@ -124,6 +151,7 @@ def run(settings: Settings, questions_path: Path, write: bool = False) -> dict:
     questions = [q for q in questions if q.get("tipo") != "sem_resposta_na_base"]
     retriever = Retriever(settings)
     current = retriever.min_similarity
+    current_confident = retriever.confident_similarity
     retriever.min_similarity = -1.0  # desliga o corte para medir as similaridades cruas
 
     rows = []
@@ -150,6 +178,14 @@ def run(settings: Settings, questions_path: Path, write: bool = False) -> dict:
     inside = [r["sim_suporte"] for r in rows if r["no_escopo"]]
     outside = [r["sim_suporte"] for r in rows if not r["no_escopo"]]
     threshold, accuracy = _best_threshold(inside, outside)
+    floor, confident = _gray_zone(inside, outside, settings.gray_margin)
+    for r in rows:
+        r["zona"] = _zone(r["sim_suporte"], floor, confident)
+    # erro "garantido" = pergunta válida recusada direto ou fora do escopo aceita sem o LLM confirmar
+    zone_errors = sum(
+        (r["no_escopo"] and r["zona"] == "recusa direta") or (not r["no_escopo"] and r["zona"] == "confiante")
+        for r in rows
+    )
     hits = [r["relevancia_termos"] for r in rows if r["relevancia_termos"] is not None]
     at_current = sum((r["sim_suporte"] >= current) == r["no_escopo"] for r in rows) / len(rows)
 
@@ -164,11 +200,17 @@ def run(settings: Settings, questions_path: Path, write: bool = False) -> dict:
         "acuracia_escopo_limiar_sugerido": round(accuracy, 3),
         "sim_suporte_no_escopo_min": min(inside) if inside else None,
         "sim_suporte_fora_escopo_max": max(outside) if outside else None,
+        "limiar_confianca_atual": current_confident,
+        "piso_sugerido": floor,
+        "limiar_confianca_sugerido": confident,
+        "zona_cinzenta": sum(r["zona"] == "zona cinzenta" for r in rows),
+        "erros_de_zona": zone_errors,
         "linhas": rows,
     }
     if write:
         manifest = dict(retriever.manifest)
-        manifest["min_similarity"] = threshold
+        manifest["min_similarity"] = floor
+        manifest["confident_similarity"] = confident
         manifest["min_similarity_calibrado"] = True
         write_manifest(settings, manifest)
     return summary
@@ -180,20 +222,21 @@ def to_markdown(summary: dict) -> str:
         "",
         f"- Filtros inferidos corretamente: **{summary['filtros_corretos']}**",
         f"- Relevância@k por termos (média, perguntas no escopo): **{summary['relevancia_termos_media']}**",
-        f"- Aceitar/recusar com o limiar atual ({summary['limiar_atual']}): "
-        f"**{summary['acuracia_escopo_limiar_atual']:.0%}** de acerto",
-        f"- Limiar sugerido: **{summary['limiar_sugerido']}** "
+        f"- Corte único que separaria este conjunto: **{summary['limiar_sugerido']}** "
         f"({summary['acuracia_escopo_limiar_sugerido']:.0%} de acerto) — menor suporte no escopo: "
         f"{summary['sim_suporte_no_escopo_min']}, maior suporte fora do escopo: "
         f"{summary['sim_suporte_fora_escopo_max']}",
+        f"- Zona cinzenta calibrada: piso **{summary['piso_sugerido']}**, limiar de confiança "
+        f"**{summary['limiar_confianca_sugerido']}** — {summary['zona_cinzenta']} pergunta(s) seguem para o "
+        f"LLM confirmar; erros que o LLM não pode corrigir: **{summary['erros_de_zona']}**",
         "",
-        "| Pergunta | No escopo | Filtros ok | Relevância@k | Sim. máx. | Sim. suporte |",
-        "|---|---|---|---|---|---|",
+        "| Pergunta | No escopo | Filtros ok | Relevância@k | Sim. máx. | Sim. suporte | Zona |",
+        "|---|---|---|---|---|---|---|",
     ]
     for r in summary["linhas"]:
         hit = "—" if r["relevancia_termos"] is None else f"{r['relevancia_termos']:.2f}"
         lines.append(
             f"| {r['pergunta']} | {'sim' if r['no_escopo'] else 'não'} | "
-            f"{'✓' if r['filtros_ok'] else '✗'} | {hit} | {r['sim_max']} | {r['sim_suporte']} |"
+            f"{'✓' if r['filtros_ok'] else '✗'} | {hit} | {r['sim_max']} | {r['sim_suporte']} | {r['zona']} |"
         )
     return "\n".join(lines) + "\n"

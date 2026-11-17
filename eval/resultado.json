@@ -1,16 +1,21 @@
 {
-  "gerado_em": "2026-11-16T20:21:53+00:00",
+  "gerado_em": "2026-11-17T15:46:08+00:00",
   "recuperacao": {
     "backend": "intfloat/multilingual-e5-small",
     "perguntas": 30,
     "filtros_corretos": "30/30",
     "relevancia_termos_media": 0.779,
-    "limiar_atual": 0.875,
-    "acuracia_escopo_limiar_atual": 1.0,
+    "limiar_atual": 0.865,
+    "acuracia_escopo_limiar_atual": 0.867,
     "limiar_sugerido": 0.875,
     "acuracia_escopo_limiar_sugerido": 1.0,
     "sim_suporte_no_escopo_min": 0.875,
     "sim_suporte_fora_escopo_max": 0.874,
+    "limiar_confianca_atual": 0.884,
+    "piso_sugerido": 0.865,
+    "limiar_confianca_sugerido": 0.884,
+    "zona_cinzenta": 7,
+    "erros_de_zona": 0,
     "linhas": [
       {
         "pergunta": "Quais são os principais problemas relatados pelos clientes?",
@@ -24,7 +29,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.4166666666666667,
         "sim_max": 0.966,
-        "sim_suporte": 0.96
+        "sim_suporte": 0.96,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais reclamações relacionadas à entrega aparecem com maior frequência?",
@@ -38,7 +44,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.5833333333333334,
         "sim_max": 0.925,
-        "sim_suporte": 0.919
+        "sim_suporte": 0.919,
+        "zona": "confiante"
       },
       {
         "pergunta": "O que os clientes mais elogiam em suas experiências de compra?",
@@ -52,7 +59,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.968,
-        "sim_suporte": 0.959
+        "sim_suporte": 0.959,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais problemas são relatados por clientes insatisfeitos?",
@@ -66,7 +74,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.5,
         "sim_max": 0.966,
-        "sim_suporte": 0.959
+        "sim_suporte": 0.959,
+        "zona": "confiante"
       },
       {
         "pergunta": "Existem padrões recorrentes nas avaliações relacionadas à qualidade dos produtos?",
@@ -75,7 +84,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.949,
-        "sim_suporte": 0.941
+        "sim_suporte": 0.941,
+        "zona": "confiante"
       },
       {
         "pergunta": "O que os clientes relatam sobre problemas relacionados à entrega?",
@@ -89,7 +99,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.8333333333333334,
         "sim_max": 0.919,
-        "sim_suporte": 0.912
+        "sim_suporte": 0.912,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais avaliações sustentam a conclusão de que existem problemas recorrentes relacionados ao prazo de entrega?",
@@ -103,7 +114,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.3333333333333333,
         "sim_max": 0.926,
-        "sim_suporte": 0.919
+        "sim_suporte": 0.919,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais são os principais problemas relatados nas avaliações com nota baixa?",
@@ -117,7 +129,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.5,
         "sim_max": 0.966,
-        "sim_suporte": 0.959
+        "sim_suporte": 0.959,
+        "zona": "confiante"
       },
       {
         "pergunta": "O que os clientes mais elogiam na categoria beleza e saúde?",
@@ -132,7 +145,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.968,
-        "sim_suporte": 0.948
+        "sim_suporte": 0.948,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais temas aparecem nas avaliações relacionadas a experiências de entrega insatisfatórias?",
@@ -146,7 +160,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.8333333333333334,
         "sim_max": 0.879,
-        "sim_suporte": 0.877
+        "sim_suporte": 0.877,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Clientes reclamam de produto recebido com defeito ou quebrado?",
@@ -155,7 +170,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.9166666666666666,
         "sim_max": 0.913,
-        "sim_suporte": 0.911
+        "sim_suporte": 0.911,
+        "zona": "confiante"
       },
       {
         "pergunta": "Há relatos de clientes que receberam um produto diferente do que compraram?",
@@ -164,7 +180,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.939,
-        "sim_suporte": 0.937
+        "sim_suporte": 0.937,
+        "zona": "confiante"
       },
       {
         "pergunta": "Como os clientes avaliam o atendimento quando têm um problema?",
@@ -173,7 +190,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.9166666666666666,
         "sim_max": 0.904,
-        "sim_suporte": 0.895
+        "sim_suporte": 0.895,
+        "zona": "confiante"
       },
       {
         "pergunta": "Os clientes reclamam de pedidos que chegaram incompletos?",
@@ -182,7 +200,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.5833333333333334,
         "sim_max": 0.916,
-        "sim_suporte": 0.904
+        "sim_suporte": 0.904,
+        "zona": "confiante"
       },
       {
         "pergunta": "Os clientes reclamam do aplicativo de celular da loja?",
@@ -191,7 +210,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.5,
         "sim_max": 0.899,
-        "sim_suporte": 0.896
+        "sim_suporte": 0.896,
+        "zona": "confiante"
       },
       {
         "pergunta": "Quais dificuldades os clientes relatam ao pedir troca ou devolução?",
@@ -200,7 +220,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.934,
-        "sim_suporte": 0.922
+        "sim_suporte": 0.922,
+        "zona": "confiante"
       },
       {
         "pergunta": "Os clientes relatam problemas com reembolso ou estorno?",
@@ -214,7 +235,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.884,
-        "sim_suporte": 0.875
+        "sim_suporte": 0.875,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "O que os clientes dizem sobre a embalagem dos produtos?",
@@ -223,7 +245,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.8333333333333334,
         "sim_max": 0.918,
-        "sim_suporte": 0.914
+        "sim_suporte": 0.914,
+        "zona": "confiante"
       },
       {
         "pergunta": "Há reclamações sobre cobrança indevida ou pedido cancelado sem aviso?",
@@ -237,7 +260,8 @@
         "filtros_ok": true,
         "relevancia_termos": 1.0,
         "sim_max": 0.884,
-        "sim_suporte": 0.883
+        "sim_suporte": 0.883,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Quais elogios os clientes fazem aos produtos de cama, mesa e banho?",
@@ -252,7 +276,8 @@
         "filtros_ok": true,
         "relevancia_termos": 0.8333333333333334,
         "sim_max": 0.915,
-        "sim_suporte": 0.907
+        "sim_suporte": 0.907,
+        "zona": "confiante"
       },
       {
         "pergunta": "Qual é a capital da França?",
@@ -261,7 +286,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.819,
-        "sim_suporte": 0.812
+        "sim_suporte": 0.812,
+        "zona": "recusa direta"
       },
       {
         "pergunta": "Explique como funciona a fotossíntese.",
@@ -270,7 +296,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.867,
-        "sim_suporte": 0.86
+        "sim_suporte": 0.86,
+        "zona": "recusa direta"
       },
       {
         "pergunta": "Escreva um código em Python para ordenar uma lista.",
@@ -279,7 +306,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.87,
-        "sim_suporte": 0.867
+        "sim_suporte": 0.867,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Quem ganhou a Copa do Mundo de 2002?",
@@ -288,7 +316,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.873,
-        "sim_suporte": 0.864
+        "sim_suporte": 0.864,
+        "zona": "recusa direta"
       },
       {
         "pergunta": "Qual a previsão do tempo para amanhã em São Paulo?",
@@ -297,7 +326,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.877,
-        "sim_suporte": 0.869
+        "sim_suporte": 0.869,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Qual foi a cotação do dólar ontem?",
@@ -306,7 +336,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.869,
-        "sim_suporte": 0.866
+        "sim_suporte": 0.866,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Me dê uma receita de bolo de cenoura.",
@@ -315,7 +346,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.879,
-        "sim_suporte": 0.874
+        "sim_suporte": 0.874,
+        "zona": "zona cinzenta"
       },
       {
         "pergunta": "Quais os sintomas da dengue?",
@@ -324,7 +356,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.866,
-        "sim_suporte": 0.864
+        "sim_suporte": 0.864,
+        "zona": "recusa direta"
       },
       {
         "pergunta": "Como declarar o imposto de renda?",
@@ -333,7 +366,8 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.864,
-        "sim_suporte": 0.861
+        "sim_suporte": 0.861,
+        "zona": "recusa direta"
       },
       {
         "pergunta": "Quem é o presidente dos Estados Unidos?",
@@ -342,15 +376,18 @@
         "filtros_ok": true,
         "relevancia_termos": null,
         "sim_max": 0.837,
-        "sim_suporte": 0.832
+        "sim_suporte": 0.832,
+        "zona": "recusa direta"
       }
     ]
   },
   "ponta_a_ponta": {
     "provedor": "openai_compat",
-    "modelo": "gemini-3.5-flash",
-    "limiar": 0.875,
-    "corretas": 32,
+    "modelo": "gemini-3-flash-preview",
+    "limiar": 0.865,
+    "limiar_confianca": 0.884,
+    "chamadas_llm": 25,
+    "corretas": 34,
     "perguntas": 34,
     "falhas_llm": 0,
     "linhas": [
@@ -360,6 +397,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -369,7 +407,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 9,
+        "zona": "confiante",
+        "citacoes": 12,
         "correto": true
       },
       {
@@ -378,6 +417,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -387,6 +427,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -396,6 +437,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -405,7 +447,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 10,
+        "zona": "confiante",
+        "citacoes": 11,
         "correto": true
       },
       {
@@ -414,6 +457,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -423,6 +467,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -432,6 +477,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -441,7 +487,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 7,
+        "zona": "zona cinzenta",
+        "citacoes": 12,
         "correto": true
       },
       {
@@ -450,6 +497,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 11,
         "correto": true
       },
@@ -459,6 +507,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -466,10 +515,11 @@
         "pergunta": "Como os clientes avaliam o atendimento quando têm um problema?",
         "tipo": "no_escopo",
         "esperado": "responder",
-        "obtido": "recusar",
-        "etapa_recusa": "geracao",
-        "citacoes": 0,
-        "correto": false
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "zona": "confiante",
+        "citacoes": 10,
+        "correto": true
       },
       {
         "pergunta": "Os clientes reclamam de pedidos que chegaram incompletos?",
@@ -477,7 +527,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 12,
+        "zona": "confiante",
+        "citacoes": 9,
         "correto": true
       },
       {
@@ -486,7 +537,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 1,
+        "zona": "confiante",
+        "citacoes": 4,
         "correto": true
       },
       {
@@ -495,17 +547,19 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 10,
+        "zona": "confiante",
+        "citacoes": 12,
         "correto": true
       },
       {
         "pergunta": "Os clientes relatam problemas com reembolso ou estorno?",
         "tipo": "no_escopo",
         "esperado": "responder",
-        "obtido": "recusar",
-        "etapa_recusa": "recuperacao",
-        "citacoes": 0,
-        "correto": false
+        "obtido": "responder",
+        "etapa_recusa": null,
+        "zona": "zona cinzenta",
+        "citacoes": 11,
+        "correto": true
       },
       {
         "pergunta": "O que os clientes dizem sobre a embalagem dos produtos?",
@@ -513,7 +567,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 9,
+        "zona": "confiante",
+        "citacoes": 10,
         "correto": true
       },
       {
@@ -522,7 +577,8 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
-        "citacoes": 8,
+        "zona": "zona cinzenta",
+        "citacoes": 11,
         "correto": true
       },
       {
@@ -531,6 +587,7 @@
         "esperado": "responder",
         "obtido": "responder",
         "etapa_recusa": null,
+        "zona": "confiante",
         "citacoes": 12,
         "correto": true
       },
@@ -540,6 +597,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -549,6 +607,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -557,7 +616,8 @@
         "tipo": "fora_do_escopo",
         "esperado": "recusar",
         "obtido": "recusar",
-        "etapa_recusa": "recuperacao",
+        "etapa_recusa": "geracao",
+        "zona": "zona cinzenta",
         "citacoes": 0,
         "correto": true
       },
@@ -567,6 +627,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -575,7 +636,8 @@
         "tipo": "fora_do_escopo",
         "esperado": "recusar",
         "obtido": "recusar",
-        "etapa_recusa": "recuperacao",
+        "etapa_recusa": "geracao",
+        "zona": "zona cinzenta",
         "citacoes": 0,
         "correto": true
       },
@@ -584,7 +646,8 @@
         "tipo": "fora_do_escopo",
         "esperado": "recusar",
         "obtido": "recusar",
-        "etapa_recusa": "recuperacao",
+        "etapa_recusa": "geracao",
+        "zona": "zona cinzenta",
         "citacoes": 0,
         "correto": true
       },
@@ -593,7 +656,8 @@
         "tipo": "fora_do_escopo",
         "esperado": "recusar",
         "obtido": "recusar",
-        "etapa_recusa": "recuperacao",
+        "etapa_recusa": "geracao",
+        "zona": "zona cinzenta",
         "citacoes": 0,
         "correto": true
       },
@@ -603,6 +667,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -612,6 +677,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -621,6 +687,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -630,6 +697,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -639,6 +707,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "geracao",
+        "zona": "zona cinzenta",
         "citacoes": 0,
         "correto": true
       },
@@ -648,6 +717,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       },
@@ -657,6 +727,7 @@
         "esperado": "recusar",
         "obtido": "recusar",
         "etapa_recusa": "recuperacao",
+        "zona": "recusa direta",
         "citacoes": 0,
         "correto": true
       }

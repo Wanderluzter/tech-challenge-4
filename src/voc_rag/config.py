@@ -56,6 +56,17 @@ class Settings:
         if os.getenv("MIN_SIMILARITY")
         else None
     )
+    # Zona cinzenta: entre o piso (min_similarity) e este limiar de confiança, a evidência é
+    # limítrofe e quem decide responder ou recusar é o LLM (2ª barreira). Vazio = valor calibrado
+    # no manifesto; sem calibração, igual ao piso (sem zona cinzenta).
+    confident_similarity: float | None = field(
+        default_factory=lambda: float(os.environ["CONFIDENT_SIMILARITY"])
+        if os.getenv("CONFIDENT_SIMILARITY")
+        else None
+    )
+    # folga usada na calibração: piso = menor suporte no escopo − margem;
+    # confiança = maior suporte fora do escopo + margem
+    gray_margin: float = field(default_factory=lambda: float(_env("GRAY_MARGIN", "0.01")))
 
     # --- geração
     llm_provider: str = field(default_factory=lambda: _env("LLM_PROVIDER", "auto"))

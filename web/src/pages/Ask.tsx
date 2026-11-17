@@ -197,8 +197,14 @@ function Trace({ result }: { result: AskResult }) {
             ))}
           </div>
           <div className="mt-2 text-xs text-[var(--muted)] tabular">
-            sim. máx {r.max_similarity.toFixed(3)} · suporte {r.support_similarity.toFixed(3)} · limiar {r.min_similarity.toFixed(3)}
+            sim. máx {r.max_similarity.toFixed(3)} · suporte {r.support_similarity.toFixed(3)} · piso {r.min_similarity.toFixed(3)}
+            {r.confident_similarity > r.min_similarity && <> · confiança {r.confident_similarity.toFixed(3)}</>}
           </div>
+          {r.borderline && (
+            <div className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
+              Zona cinzenta: o suporte ficou entre o piso e o limiar de confiança, então o LLM confirmou se as avaliações tratam do assunto antes de responder.
+            </div>
+          )}
         </Step>
         {themes.length > 0 && (
           <Step n={4} title={`Panorama do recorte — ${fmt.int(r.stats.total ?? 0)} avaliações`}>
@@ -464,6 +470,27 @@ export default function AskPage({ meta, models, model, setModel, refreshModels }
                     {result.refusal_reason && <p className="mt-1 text-sm text-[var(--muted)]">{result.refusal_reason}</p>}
                   </div>
                 </div>
+                {result.coverage.length > 0 && (
+                  <div className="mt-5 border-t border-[var(--grid)] pt-4">
+                    <h3 className="text-sm font-semibold">O que a base cobre{result.retrieval.stats?.total ? " neste recorte" : ""}</h3>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {result.coverage.map((t) => <Pill key={t.tema}>{t.rotulo} · {fmt.int(t.n)}</Pill>)}
+                    </div>
+                  </div>
+                )}
+                {result.suggestions.length > 0 && (
+                  <div className="mt-4">
+                    <h3 className="text-sm font-semibold">Perguntas que a base sabe responder</h3>
+                    <div className="mt-2 grid gap-1.5">
+                      {result.suggestions.map((q) => (
+                        <button key={q} type="button" onClick={() => submit(q)}
+                          className="flex items-center justify-between gap-3 rounded-lg border border-[var(--grid)] px-3 py-2 text-left text-sm transition hover:border-brand-500 hover:text-brand-700 dark:hover:text-brand-100">
+                          {q} <ArrowRight size={14} className="shrink-0" />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </Card>
             )}
 

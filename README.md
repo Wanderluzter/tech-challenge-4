@@ -51,11 +51,12 @@ flowchart TD
         X -- não --> R
         S --> R[Busca híbrida<br/>densa + BM25, com filtros]
         R --> U[Fusão RRF]
-        U --> G{Evidência suficiente?<br/>≥ 3 avaliações acima<br/>do limiar de similaridade}
-        G -- não --> N[Recusa<br/>LLM não é chamado]
-        G -- sim --> M[Diversificação MMR<br/>top-k]
-        M --> P[Contexto<br/>evidências numeradas<br/>+ panorama do recorte]
-        P --> L[LLM via chain LCEL<br/>prompt, ChatOpenAI, parser<br/>responde citando n]
+        U --> G{Suporte da 3ª melhor<br/>avaliação × piso e<br/>limiar de confiança}
+        G -- abaixo do piso --> N[Recusa + temas cobertos<br/>e perguntas sugeridas<br/>LLM não é chamado]
+        G -- acima da confiança --> M[Diversificação MMR<br/>top-k]
+        G -- zona cinzenta --> M
+        M --> P[Contexto<br/>evidências numeradas<br/>+ panorama do recorte<br/>+ aviso se limítrofe]
+        P --> L[LLM via chain LCEL<br/>prompt, ChatOpenAI, parser<br/>responde citando n<br/>ou recusa se não trata do assunto]
         L --> V{Citações válidas?}
         V -- não --> N2[Recusa / resposta descartada]
         V -- sim --> O[Resposta + evidências<br/>+ rastro do pipeline]
@@ -178,11 +179,11 @@ O panorama existe porque top-k recupera *exemplos*, não *contagens*: sem ele, "
 
 | # | Onde | O que faz | Cobre |
 |---|---|---|---|
-| 1 | Recuperação | Exige ao menos 3 avaliações distintas com similaridade ≥ limiar calibrado. Se não houver, **o LLM nem é chamado**. Filtros que não retornam nada também recusam aqui. | Pergunta fora do escopo ("capital da França"); recorte vazio |
-| 2 | Geração | O modelo é instruído a responder `SEM_EVIDENCIA:` quando as avaliações recuperadas não tratam do que foi perguntado, e a declarar o que não conseguiu sustentar quando a cobertura é parcial. | Pergunta do domínio sem resposta na base ("bateria do iPhone 15") |
+| 1 | Recuperação | Compara a similaridade da 3ª melhor avaliação distinta com dois limiares calibrados. Abaixo do **piso**, recusa e **o LLM nem é chamado**. Entre o piso e o **limiar de confiança** (zona cinzenta), as evidências seguem marcadas como limítrofes e o LLM confirma se tratam do assunto; sem LLM disponível, recusa. Filtros que não retornam nada também recusam aqui. | Pergunta fora do escopo ("capital da França"); recorte vazio |
+| 2 | Geração | O modelo é instruído a responder `SEM_EVIDENCIA:` quando nenhuma avaliação recuperada trata do que foi perguntado, e a responder a parte sustentada, declarando o que faltou, quando a cobertura é parcial. | Pergunta do domínio sem resposta na base ("bateria do iPhone 15"); pergunta fora do escopo que caiu na zona cinzenta ("receita de bolo") |
 | 3 | Pós-geração | Citações a números inexistentes são removidas; resposta sem nenhuma citação válida é **descartada**. | Modelo que ignora as regras |
 
-A recusa informa em que etapa ocorreu e por quê.
+**Recusa útil.** A recusa informa em que etapa ocorreu e por quê e, para não ser um beco sem saída, mostra o que a base cobre (os temas mais frequentes do recorte, com contagem) e três perguntas que ela sabe responder, clicáveis na interface.
 
 ## 7. Metadados (desafio adicional)
 
@@ -199,27 +200,28 @@ A recusa informa em que etapa ocorreu e por quê.
 
 ## 8. Avaliação
 
-`python -m voc_rag.cli eval --write --e2e` roda [`eval/perguntas.json`](eval/perguntas.json): **20 perguntas no escopo** (todas as do enunciado + 6 da equipe: aplicativo, troca/devolução, reembolso, embalagem, cobrança/cancelamento e elogios em cama, mesa e banho), **10 fora do escopo** e **4 do domínio sem resposta na base** (bateria do iPhone 15, faturamento, Pix e cashback — os dois últimos têm zero menções nas 38.287 avaliações). Mede filtros inferidos, relevância@k por termos esperados (proxy auditável; não substitui julgamento humano) e a similaridade de suporte — a da 3ª melhor avaliação distinta —, usada para **calibrar o limiar** que separa o que responder do que recusar. `--write` grava o limiar no manifesto do índice; `--e2e` roda o pipeline completo e mostra qual barreira recusou cada pergunta.
+`python -m voc_rag.cli eval --write --e2e` roda [`eval/perguntas.json`](eval/perguntas.json): **20 perguntas no escopo** (todas as do enunciado + 6 da equipe: aplicativo, troca/devolução, reembolso, embalagem, cobrança/cancelamento e elogios em cama, mesa e banho), **10 fora do escopo** e **4 do domínio sem resposta na base** (bateria do iPhone 15, faturamento, Pix e cashback — os dois últimos têm zero menções nas 38.287 avaliações). Mede filtros inferidos, relevância@k por termos esperados (proxy auditável; não substitui julgamento humano) e a similaridade de suporte — a da 3ª melhor avaliação distinta —, usada para **calibrar a zona cinzenta**: o piso fica uma margem (0,01) abaixo do menor suporte no escopo e o limiar de confiança, uma margem acima do maior suporte fora do escopo. `--write` grava os dois no manifesto do índice; `--e2e` roda o pipeline completo e mostra qual barreira recusou cada pergunta.
 
 ### Resultados (configuração final)
 
-Medidos em 16/11/2026 sobre a base real (38.287 avaliações), com `intfloat/multilingual-e5-small` e o LLM `gemini-3.5-flash` (API do Google, camada gratuita). Saída completa em [`eval/resultado.md`](eval/resultado.md); a aba *Qualidade* do dashboard lê a mesma execução. Uma rodada anterior com outro LLM, `nvidia/nemotron-3-ultra-550b-a55b:free` (via OpenRouter), deu o mesmo placar, 32/34, com os mesmos dois erros.
+Medidos em 17/11/2026 sobre a base real (38.287 avaliações), com `intfloat/multilingual-e5-small` e o LLM `gemini-3-flash-preview` (API do Google, camada gratuita; o `gemini-3.5-flash` estava sem cota). Saída completa em [`eval/resultado.md`](eval/resultado.md); a aba *Qualidade* do dashboard lê a mesma execução. A versão anterior, com um único limiar (0,875), fez 32/34 com o `gemini-3.5-flash` e com o `nvidia/nemotron-3-ultra-550b-a55b:free`.
 
 | Métrica | Backend offline (`lsa`), sem LLM, 25 perguntas | **e5 + Gemini, 34 perguntas** |
 |---|---|---|
 | Filtros inferidos corretamente | 22/22 | **30/30** |
 | Relevância@k por termos (perguntas no escopo) | 0,74 | **0,78** |
-| Aceitar/recusar só com o limiar — barreira 1 | 86% | **100%** (limiar calibrado: 0,875) |
-| Decisão ponta a ponta (responder × recusar) | 18/25 | **32/34** |
-| Perguntas fora do escopo recusadas | — | **10/10**, todas antes de chamar o LLM |
+| Zona cinzenta calibrada (piso – confiança) | — | **0,865 – 0,884**; 0 erros que o LLM não possa corrigir |
+| Decisão ponta a ponta (responder × recusar) | 18/25 | **34/34** (antes: 32/34) |
+| Perguntas no escopo respondidas | — | **20/20** (3 delas na zona cinzenta) |
+| Perguntas fora do escopo recusadas | — | **10/10** (6 antes do LLM, 4 pelo LLM na zona cinzenta) |
 | Perguntas do domínio sem resposta recusadas | — | **4/4** (3 na recuperação, 1 pelo LLM) |
 
-**Os dois erros, ambos recusas indevidas (nenhuma resposta sem fundamento):**
+**Os dois erros da versão anterior, e o que mudou:**
 
-- *"Os clientes relatam problemas com reembolso ou estorno?"* — similaridade de suporte 0,875, exatamente sobre o limiar; no pipeline completo ficou um fio abaixo e foi recusada na recuperação.
-- *"Como os clientes avaliam o atendimento quando têm um problema?"* — chegou ao LLM, que respondeu `SEM_EVIDENCIA`. As avaliações recuperadas falam de atendimento ruim, mas pouco de *como* o cliente avalia o atendimento diante de um problema; os dois modelos foram conservadores aqui (o Nemotron chegou a responder com 2 citações em uma execução e a recusar em outra).
+- *"Os clientes relatam problemas com reembolso ou estorno?"* — suporte 0,875, exatamente sobre o limiar único; no pipeline completo ficou um fio abaixo e foi recusada. Agora cai na zona cinzenta, o LLM confirma a relevância e responde com 11 citações.
+- *"Como os clientes avaliam o atendimento quando têm um problema?"* — o LLM respondia `SEM_EVIDENCIA` porque as avaliações falavam de atendimento ruim, mas pouco de *como* o cliente o avalia. O prompt passou a pedir a parte sustentada em vez da recusa total quando algumas avaliações tratam do assunto; agora responde com 10 citações.
 
-**Leitura.** O sistema erra para o lado seguro: nas 34 perguntas não houve nenhuma resposta a pergunta que deveria ser recusada. O ponto frágil é a **margem do limiar**: o menor suporte no escopo foi 0,875 e o maior fora do escopo, 0,874 ("receita de bolo de cenoura"). Similaridades do E5 ficam comprimidas numa faixa alta, então perguntas novas podem cair do lado errado. Um reranker cross-encoder (seção 11) daria uma pontuação com mais separação.
+**Leitura.** Com um único limiar, a margem entre perguntas válidas (menor suporte 0,875) e fora do escopo (maior suporte 0,874, "receita de bolo de cenoura") era de 0,001: similaridades do E5 ficam comprimidas numa faixa alta e perguntas novas poderiam cair do lado errado. A zona cinzenta troca esse corte por duas barreiras: o que está claramente fora é recusado sem custo; o que é ambíguo (7 das 30 perguntas de calibração) vai ao LLM, que decidiu certo em todos os casos. O custo é uma chamada ao LLM nessas perguntas; o risco residual é o LLM aceitar uma pergunta fora do escopo na faixa cinzenta, mitigado pela validação de citações.
 
 Para reproduzir: `python -m voc_rag.cli eval --write --e2e` e `python -m voc_rag.cli examples`. Se o LLM ficar indisponível (limite de requisições), a avaliação tenta de novo e, persistindo a falha, marca a pergunta como `erro_llm` em vez de contá-la como respondida; o `examples` não sobrescreve o arquivo.
 
@@ -241,6 +243,7 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 
 > **Pergunta:** Qual é a capital da França?
 > **Status:** sem evidência (recusa na recuperação, LLM não chamado) — 0 avaliações atingiram a similaridade mínima (maior encontrada: 0,82); mínimo exigido: 3.
+> **O que a base cobre:** temas mais frequentes, com contagem · **Perguntas que a base sabe responder:** três sugestões clicáveis.
 
 **Revisão manual das respostas.** As afirmações conferem com as avaliações citadas. A ressalva mais relevante: no exemplo 1 o modelo agrupa [9] e [12] como "não recebimento", mas pelos metadados esses pedidos chegaram atrasados — é o tipo de deslize que a validação estrutural de citações não pega (seção 11).
 
@@ -258,6 +261,8 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 | Temas por palavras-chave | Classificador / clustering | Transparente e barato. É aproximação e é apresentado como tal |
 | MMR + deduplicação | Top-k puro | A base tem milhares de comentários quase idênticos |
 | Recusa antes do LLM | Confiar só no prompt | Sem contexto não há o que alucinar, e não há custo |
+| Zona cinzenta (piso + limiar de confiança) | Um único limiar; reranker | O limiar único separava os grupos por 0,001. Na faixa ambígua o LLM, que já lê as evidências, confirma a relevância, sem modelo extra |
+| Recusa com temas e perguntas sugeridas | Só a mensagem de recusa | O gestor sai sabendo o que a base consegue responder, sem afirmar nada que ela não sustenta |
 | Validação de citações pós-geração | Confiar no modelo | Garante que toda resposta exibida aponta para evidências existentes |
 | API compatível com OpenAI via `ChatOpenAI` | SDK de um provedor (`ChatGoogleGenerativeAI`) | Uma chain só atende OpenAI, Gemini, Groq e Ollama; trocar de provedor é mudar o `.env` |
 | LangGraph para orquestrar | Uma função Python sequencial; agente ReAct | O fluxo é fixo e auditável (não há decisão do LLM sobre qual ferramenta usar), mas tem desvios: o grafo torna explícitos os dois pontos de recusa e cada nó aparece separado no trace do LangSmith |
@@ -266,7 +271,7 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 
 ## 11. Limitações e próximos passos
 
-- **Margem estreita do limiar.** Com o e5-small, perguntas válidas e fora do escopo ficam separadas por 0,001 de similaridade de suporte (seção 8). Funciona no conjunto de avaliação, mas é sensível a perguntas novas.
+- **Similaridades comprimidas.** Com o e5-small, perguntas válidas e fora do escopo ficam separadas por 0,001 de similaridade de suporte (seção 8). A zona cinzenta delega esses casos ao LLM, mas a calibração vem de 30 perguntas; um conjunto maior daria limiares mais confiáveis.
 - **LLM gratuito não determinístico e com cota diária.** A mesma pergunta pode ser respondida numa execução e recusada em outra, e a cota de um modelo pode acabar no meio do uso. A cadeia de fallback mantém a interface respondendo, mas modelos diferentes escrevem respostas diferentes; um modelo pago ou local, com temperatura 0, reduz a variação.
 - **UF só por filtro manual.** "Clientes de São Paulo" não vira filtro automaticamente; o estado é selecionado na barra lateral.
 - **Relevância medida por proxy.** Termos esperados não substituem um conjunto anotado por pessoas; anotar ~50 pares pergunta–avaliação permitiria medir precisão e recall de verdade.
@@ -274,7 +279,7 @@ Trecho (pergunta ampla; resposta do LLM resumida, evidências literais):
 - **Temas por regras** têm falsos positivos e negativos; cerca de 36% das avaliações não recebem tema. As contagens são sempre apresentadas como aproximadas.
 - **Regras de filtro** cobrem os padrões de pergunta mais comuns; formulações incomuns ficam sem filtro (a busca semântica ainda funciona, e os filtros manuais estão na interface).
 - **Categoria do pedido** é a do primeiro item; pedidos com itens de categorias diferentes perdem essa nuance.
-- **Sem reranker.** Um cross-encoder multilíngue sobre os candidatos do RRF tende a melhorar a ordenação, ao custo de latência.
+- **Sem reranker.** Um cross-encoder multilíngue sobre os candidatos do RRF tende a melhorar a ordenação e a separar melhor o que é relevante, o que estreitaria a zona cinzenta, ao custo de latência.
 - **Sem memória de conversa.** Cada pergunta é independente. O próximo passo seria um checkpointer do LangGraph (ou `RunnableWithMessageHistory`) para perguntas de acompanhamento.
 - **Avaliação de fidelidade estrutural.** As métricas são recall de filtros, relevância por termos e acerto de recusa; RAGAS (faithfulness, answer relevancy) com LLM-juiz completaria a avaliação, ao custo de chamadas extras ao modelo.
 

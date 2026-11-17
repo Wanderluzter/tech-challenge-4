@@ -33,13 +33,22 @@ def render_answer(result, show_all: bool = True) -> str:
         lines.append("**Pergunta ampla, expandida em sub-buscas pelos temas mais frequentes do recorte:** " + " | ".join(f"“{q}”" for q in r.queries))
     lines.append(
         f"**Recuperação:** {r.n_dense} candidatos densos + {r.n_bm25} lexicais → "
-        f"{r.n_candidates} únicos → {r.n_above_threshold} acima do limiar {r.min_similarity:.2f} → "
+        f"{r.n_candidates} únicos → {r.n_above_threshold} acima do piso {r.min_similarity:.3f} → "
         f"{len(result.evidences)} no contexto (similaridade máx. {r.max_similarity:.2f})"
     )
+    if r.borderline:
+        lines.append(
+            f"**Zona cinzenta:** suporte {r.support_similarity:.3f} entre o piso {r.min_similarity:.3f} e o "
+            f"limiar de confiança {r.confident_similarity:.3f}; o LLM confirmou se as avaliações tratam do assunto."
+        )
     lines += ["", f"**Status:** {result.status}" + (f" (recusa na etapa de {result.refusal_stage})" if result.refusal_stage else ""), ""]
     lines += [result.answer, ""]
     if result.refusal_reason and result.refusal_stage == "recuperacao":
         lines += [f"_Motivo: {result.refusal_reason}_", ""]
+    if result.coverage:
+        lines.append("**O que a base cobre:** " + "; ".join(f"{t['rotulo']} ({t['n']})" for t in result.coverage))
+    if result.suggestions:
+        lines += ["", "**Perguntas que a base sabe responder:**"] + [f"- {q}" for q in result.suggestions] + [""]
     for warning in result.warnings:
         lines.append(f"> Aviso: {warning}")
     evidences = result.evidences if show_all else result.cited_evidences
@@ -108,7 +117,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(report)
         if args.write:
-            print(f"Limiar {summary['limiar_sugerido']} gravado em {settings.manifest_path}")
+            print(
+                f"Piso {summary['piso_sugerido']} e limiar de confiança {summary['limiar_confianca_sugerido']} "
+                f"gravados em {settings.manifest_path}"
+            )
     elif args.command == "examples":
         from .pipeline import RagPipeline
 
@@ -123,7 +135,8 @@ def main(argv: list[str] | None = None) -> int:
             f"- Embeddings: `{manifest['embedding_model']}`",
             f"- Geração: `{pipeline.generator.provider}`"
             + (f" / `{settings.llm_model}`" if pipeline.generator.provider != "extractive" else " (sem LLM)"),
-            f"- Limiar de similaridade: {pipeline.retriever.min_similarity}",
+            f"- Similaridade: piso {pipeline.retriever.min_similarity}, limiar de confiança "
+            f"{pipeline.retriever.confident_similarity} (entre os dois, o LLM confirma a relevância)",
             "",
         ]
         from .evaluation import FALLBACK, ask_with_retry

@@ -225,6 +225,79 @@ def test_out_of_scope_question_is_refused_without_llm(pipeline, monkeypatch):
 def test_filters_without_matches_are_refused(pipeline):
     result = pipeline.ask("problemas na entrega", {"ano": 2016})
     assert result.status == "sem_evidencia" and "filtros" in result.refusal_reason
+    # recorte vazio: a ajuda da recusa usa a base inteira
+    assert result.coverage and result.suggestions
+
+
+def test_refusal_says_what_the_base_can_answer(pipeline):
+    result = pipeline.ask("Explique a teoria da relatividade de Einstein")
+    assert result.status == "sem_evidencia"
+    assert 0 < len(result.coverage) <= 5 and all({"tema", "rotulo", "n"} <= set(t) for t in result.coverage)
+    assert 0 < len(result.suggestions) <= 3 and all(q.endswith("?") for q in result.suggestions)
+
+
+def test_answer_has_no_refusal_help(pipeline):
+    result = pipeline.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    assert result.status == "ok" and result.coverage == [] and result.suggestions == []
+
+
+def _api_error(status: int):
+    import httpx
+    from openai import RateLimitError
+
+    response = httpx.Response(status, request=httpx.Request("POST", "http://llm.test"))
+    return RateLimitError("sem cota", response=response, body=None)
+
+
+@pytest.fixture
+def gray_zone(pipeline, monkeypatch):
+    """Põe o limiar de confiança acima de qualquer suporte: toda pergunta aceita fica na zona cinzenta."""
+    monkeypatch.setattr(pipeline.retriever, "confident_similarity", 1.01)
+    return pipeline
+
+
+def test_gray_zone_without_llm_is_refused(gray_zone):
+    result = gray_zone.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    assert result.retrieval.borderline
+    assert result.status == "sem_evidencia" and result.refusal_stage == "recuperacao"
+    assert "zona cinzenta" in result.refusal_reason and result.suggestions
+
+
+def test_gray_zone_goes_to_llm_with_warning(gray_zone, monkeypatch):
+    seen = {}
+
+    def answer(model, messages):
+        seen["context"] = messages[1].content
+        return "- Clientes relatam produtos quebrados [1]."
+
+    monkeypatch.setattr(gray_zone.generator, "provider", "openai_compat")
+    monkeypatch.setattr(gray_zone.generator, "_chains", {})
+    monkeypatch.setattr(gray_zone.generator, "_chat_model", _fake_chat_model(answer))
+    result = gray_zone.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    assert result.status == "ok" and result.retrieval.borderline
+    assert "limítrofe" in seen["context"]
+
+
+def test_gray_zone_with_llm_down_is_refused(gray_zone, monkeypatch):
+    def answer(model, messages):
+        raise _api_error(429)
+
+    monkeypatch.setattr(gray_zone.generator, "provider", "openai_compat")
+    monkeypatch.setattr(gray_zone.generator, "_chains", {})
+    monkeypatch.setattr(gray_zone.generator, "_chat_model", _fake_chat_model(answer))
+    result = gray_zone.ask("Os clientes reclamam de produto que veio quebrado ou com defeito?")
+    assert result.status == "sem_evidencia" and result.refusal_stage == "geracao"
+    assert result.cited_refs == [] and result.evidences
+
+
+def test_gray_zone_calibration_keeps_margin():
+    from voc_rag.evaluation import _gray_zone, _zone
+
+    floor, confident = _gray_zone([0.875, 0.9, 0.95], [0.81, 0.874], margin=0.01)
+    assert (floor, confident) == (0.865, 0.884)
+    assert _zone(0.86, floor, confident) == "recusa direta"
+    assert _zone(0.874, floor, confident) == "zona cinzenta"
+    assert _zone(0.9, floor, confident) == "confiante"
 
 
 def test_model_refusal_is_propagated(pipeline, monkeypatch):

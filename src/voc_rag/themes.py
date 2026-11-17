@@ -86,6 +86,20 @@ THEME_QUERIES = {
     "devolucao_reembolso": "quero devolver, trocar, cancelar e receber o dinheiro de volta",
     "recomendacao": "recomendo a loja e o produto",
 }
+# Perguntas sugeridas quando o sistema recusa: mostram ao gestor o que a base sabe responder.
+THEME_QUESTIONS = {
+    "entrega_atrasada": "O que os clientes relatam sobre atrasos na entrega?",
+    "produto_nao_recebido": "Os clientes relatam pedidos que nunca chegaram?",
+    "entrega_incompleta": "Os clientes reclamam de pedidos que chegaram incompletos?",
+    "entrega_no_prazo": "O que os clientes elogiam na entrega?",
+    "produto_com_defeito": "Clientes reclamam de produto recebido com defeito ou quebrado?",
+    "produto_errado": "Há relatos de clientes que receberam um produto diferente do que compraram?",
+    "qualidade_baixa": "O que os clientes dizem sobre a qualidade abaixo do esperado?",
+    "qualidade_boa": "O que os clientes mais elogiam na qualidade dos produtos?",
+    "atendimento": "Como os clientes avaliam o atendimento quando têm um problema?",
+    "devolucao_reembolso": "Quais dificuldades os clientes relatam ao pedir troca, devolução ou reembolso?",
+    "recomendacao": "Por que os clientes recomendam a loja?",
+}
 POSITIVE_THEMES = frozenset({"entrega_no_prazo", "qualidade_boa", "recomendacao"})
 
 

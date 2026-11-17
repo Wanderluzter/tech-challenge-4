@@ -115,6 +115,14 @@ with left:
             st.caption(f"Recusa na recuperação, sem chamar o LLM. {result.refusal_reason}")
         else:
             st.caption("Recusa na geração: as avaliações recuperadas não sustentam uma resposta.")
+        if result.coverage:
+            st.markdown("**O que a base cobre:** " + " · ".join(f"{t['rotulo']} ({t['n']})" for t in result.coverage))
+        if result.suggestions:
+            st.markdown("**Perguntas que a base sabe responder:**")
+            for i, suggestion in enumerate(result.suggestions):
+                st.button(suggestion, key=f"sugestao-{i}", on_click=_set_question, args=(suggestion,))
+    if result.retrieval.borderline:
+        st.caption("Zona cinzenta de similaridade: o LLM confirmou se as avaliações tratam do assunto.")
     for warning in result.warnings:
         st.caption(f"⚠️ {warning}")
 

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, ReferenceLine, ResponsiveContainer,
+  Bar, BarChart, CartesianGrid, Cell, LabelList, Line, LineChart, ReferenceArea, ReferenceLine, ResponsiveContainer,
   Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis,
 } from "recharts";
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
@@ -285,7 +285,9 @@ function QualityTab() {
   const sorted = [...ret.linhas].sort((a, b) => a.sim_suporte - b.sim_suporte).map((r, i) => ({ ...r, y: i + 1 }));
   const inside = sorted.filter((r) => r.no_escopo);
   const outside = sorted.filter((r) => !r.no_escopo);
-  const threshold = e2e?.limiar ?? ret.limiar_sugerido;
+  const threshold = e2e?.limiar ?? ret.piso_sugerido ?? ret.limiar_sugerido;
+  const confident = e2e?.limiar_confianca ?? ret.limiar_confianca_sugerido ?? threshold;
+  const hasGray = confident > threshold;
   const margin = ret.sim_suporte_no_escopo_min - ret.sim_suporte_fora_escopo_max;
   const relevance = ret.linhas.filter((r) => r.relevancia_termos !== null)
     .map((r) => ({ pergunta: r.pergunta, valor: r.relevancia_termos as number }))
@@ -299,11 +301,16 @@ function QualityTab() {
           hint={`ponta a ponta · ${e2e.modelo || e2e.provedor}`} />}
         <Stat label="Filtros inferidos" value={ret.filtros_corretos} hint="corretos por pergunta" />
         <Stat label="Relevância@k" value={ret.relevancia_termos_media !== null ? fmt.dec(ret.relevancia_termos_media) : "—"} hint="média nas perguntas no escopo (por termos)" />
-        <Stat label="Limiar de similaridade" value={fmt.dec(threshold, 3)} hint={`margem ${fmt.dec(margin, 3)} entre os grupos`} />
+        {hasGray
+          ? <Stat label="Zona cinzenta" value={`${fmt.dec(threshold, 3)}–${fmt.dec(confident, 3)}`}
+              hint={`${ret.zona_cinzenta ?? "—"} pergunta(s) decididas pelo LLM`} />
+          : <Stat label="Limiar de similaridade" value={fmt.dec(threshold, 3)} hint={`margem ${fmt.dec(margin, 3)} entre os grupos`} />}
       </div>
 
       <Card title="Onde o limiar separa o que responder do que recusar"
-        subtitle="Similaridade de suporte (3ª melhor avaliação) de cada pergunta de calibração. À direita da linha, o sistema responde."
+        subtitle={hasGray
+          ? "Similaridade de suporte (3ª melhor avaliação) de cada pergunta de calibração. Abaixo do piso, recusa direta; na faixa sombreada, o LLM confirma a relevância; acima, o sistema responde."
+          : "Similaridade de suporte (3ª melhor avaliação) de cada pergunta de calibração. À direita da linha, o sistema responde."}
         action={<div className="flex gap-3"><LegendDot color={C.s1} label="No escopo" /><LegendDot color={C.s2} label="Fora do escopo" /></div>}>
         <ResponsiveContainer width="100%" height={300}>
           <ScatterChart margin={{ left: -16, right: 16, top: 28 }}>
@@ -322,15 +329,20 @@ function QualityTab() {
                 </div>
               );
             }} />
+            {hasGray && <ReferenceArea x1={threshold} x2={confident} fill={C.ink2} fillOpacity={0.08} ifOverflow="extendDomain" />}
             <ReferenceLine x={threshold} stroke={C.ink2} strokeDasharray="4 4"
-              label={{ value: `limiar ${threshold.toFixed(3)}`, position: "top", fill: C.ink2, fontSize: 11 }} />
+              label={{ value: `${hasGray ? "piso" : "limiar"} ${threshold.toFixed(3)}`, position: "top", fill: C.ink2, fontSize: 11 }} />
+            {hasGray && <ReferenceLine x={confident} stroke={C.ink2} strokeDasharray="4 4"
+              label={{ value: `confiança ${confident.toFixed(3)}`, position: "insideTopRight", fill: C.ink2, fontSize: 11 }} />}
             <Scatter isAnimationActive={false} data={inside} fill={C.s1} stroke={C.surface} strokeWidth={2} />
             <Scatter isAnimationActive={false} data={outside} fill={C.s2} stroke={C.surface} strokeWidth={2} />
           </ScatterChart>
         </ResponsiveContainer>
         <p className="mt-2 text-xs text-[var(--muted)]">
           Menor suporte no escopo: {ret.sim_suporte_no_escopo_min.toFixed(3)} · maior fora do escopo: {ret.sim_suporte_fora_escopo_max.toFixed(3)}.
-          A margem estreita é a principal fragilidade: perguntas novas podem cair do lado errado.
+          {hasGray
+            ? "A margem entre os grupos é estreita; por isso a decisão não depende de um único corte: o que cai na faixa cinzenta vai para o LLM, que confirma se as avaliações tratam do assunto."
+            : "A margem estreita é a principal fragilidade: perguntas novas podem cair do lado errado."}
         </p>
       </Card>
 

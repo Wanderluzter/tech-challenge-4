@@ -30,7 +30,7 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
 
 **Slide:** 38.287 avaliações com comentário; barras da nota média por situação da entrega (3,93 no prazo, 1,88 com atraso, 1,48 sem entrega).
 
-> "A Olist tem 38 mil avaliações com comentário. A nota diz quanto o cliente gostou; o porquê está no texto. Só um exemplo: atraso derruba a nota média em dois pontos. O requisito do sistema é simples: cada afirmação vem das avaliações e, sem evidência, ele diz 'não sei'."
+> "A Olist tem 38 mil avaliações com comentário. A nota diz quanto o cliente gostou; o porquê está no texto. Só um exemplo: atraso derruba a nota média em dois pontos. O requisito do sistema é simples: cada afirmação vem das avaliações e, sem evidência, ele não responde, mas diz o que sabe responder."
 
 ## 3 · O que o gestor recebe — 0:25–0:40
 
@@ -46,15 +46,15 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
 
 ## 5 · Arquitetura do pipeline RAG — 0:55–1:20
 
-**Slide:** grafo LangGraph `interpretar → recuperar → gerar → resposta`, com as duas saídas para "não sei".
+**Slide:** grafo LangGraph `interpretar → recuperar → gerar → resposta`, com as duas saídas para recusa e a zona cinzenta entre recuperar e gerar.
 
-> "O fluxo pedido no desafio vira um grafo do LangGraph com três nós. Interpretar faz o processamento da pergunta. Recuperar cuida de embeddings, busca e seleção. Gerar monta o contexto e chama o LLM por uma chain LCEL do LangChain. As duas saídas para baixo são o centro do projeto: sem evidência suficiente, o grafo termina antes do LLM; resposta sem citação válida é descartada."
+> "O fluxo pedido no desafio vira um grafo do LangGraph com três nós. Interpretar faz o processamento da pergunta. Recuperar cuida de embeddings, busca e seleção. Gerar monta o contexto e chama o LLM por uma chain LCEL do LangChain. As duas saídas para baixo são o centro do projeto: evidência claramente fraca termina antes do LLM; evidência limítrofe segue para o LLM confirmar se trata do assunto; resposta sem citação válida é descartada."
 
 ## 6 · Recuperação e contexto — 1:20–1:50
 
-**Slide:** exemplo real "Quais reclamações relacionadas à entrega aparecem com maior frequência?": 40 + 40 candidatas → 75 após RRF → 38 acima do limiar → 12 no contexto.
+**Slide:** exemplo real "Quais reclamações relacionadas à entrega aparecem com maior frequência?": 40 + 40 candidatas → 75 após RRF → 44 acima do piso → 12 no contexto.
 
-> "Na prática, para esta pergunta: 'reclamações' vira o filtro nota 1 a 3. A busca vetorial com e5 e o BM25 trazem 40 candidatas cada; a fusão RRF deixa 75; 38 passam do limiar; o MMR escolhe 12 diferentes entre si. O contexto leva as 12 avaliações numeradas com metadados, mais uma contagem por temas, porque top-k traz exemplos, não frequência."
+> "Na prática, para esta pergunta: 'reclamações' vira o filtro nota 1 a 3. A busca vetorial com e5 e o BM25 trazem 40 candidatas cada; a fusão RRF deixa 75; 44 passam do piso de similaridade; o MMR escolhe 12 diferentes entre si. O contexto leva as 12 avaliações numeradas com metadados, mais uma contagem por temas, porque top-k traz exemplos, não frequência."
 
 ## 7 · Demonstração — 1:50–3:25
 
@@ -64,10 +64,10 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
   > "O sistema detecta que é uma pergunta ampla, restringe às notas baixas e a decompõe em sub-buscas pelos temas mais frequentes. Clicando no número, vou direto à avaliação: texto, nota, data, categoria, similaridade e a posição nos rankings vetorial e BM25."
 - **Pergunta 2 (20 s)** — *O que os clientes mais elogiam na categoria beleza e saúde?*
   > "Dois filtros inferidos: nota 4 ou 5 e a categoria, aplicados antes da busca. Posso trocá-los no botão Filtros."
-- **Pergunta 3 (15 s)** — *Qual é a capital da França?*
-  > "Nenhuma avaliação atinge a similaridade mínima: recusa na recuperação, sem chamar o modelo."
-- **Pergunta 4 (25 s)** — *O que os clientes acham do tempo de bateria do iPhone 15?*
-  > "Parece do domínio, mas só uma avaliação passa do limiar, e exigimos três: recusa antes do modelo."
+- **Pergunta 3 (20 s)** — *Qual é a capital da França?*
+  > "Nenhuma avaliação atinge a similaridade mínima: recusa na recuperação, sem chamar o modelo. Mas a recusa não é um beco sem saída: mostra o que a base cobre e sugere perguntas que ela sabe responder. Clico numa e ela já é respondida."
+- **Pergunta 4 (20 s)** — *O que os clientes acham do tempo de bateria do iPhone 15?*
+  > "Parece do domínio, mas só duas avaliações passam do piso, e exigimos três: recusa antes do modelo."
 
 *(Se uma pergunta se comportar diferente na gravação, mostre o que aconteceu e diga por quê. Se nenhum modelo responder, a interface mostra só as evidências: grave essa pergunta de novo.)*
 
@@ -75,19 +75,19 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
 
 **Slide:** um cartão por situação do enunciado, cada um ligado a um nó do grafo.
 
-> "O desafio pede três situações, e cada uma tem uma barreira no grafo. Nada relevante ou fora do escopo: o limiar corta antes do LLM. Evidência insuficiente: o modelo é instruído a recusar. Afirmação sem suporte: a validação descarta respostas sem citação válida."
+> "O desafio pede três situações, e cada uma tem uma barreira no grafo. Nada relevante ou fora do escopo: o piso corta antes do LLM. Evidência insuficiente ou limítrofe: o modelo confirma se ela trata do assunto e, se não, recusa. Afirmação sem suporte: a validação descarta respostas sem citação válida."
 
 ## 9 · Resultados — 3:45–4:10
 
 **Slide:** 34 quadrados, um por pergunta da avaliação; 30/30 filtros; relevância@k 0,779.
 
-> "Avaliamos com 34 perguntas: 20 com resposta na base e 14 sem, incluindo temas que nem existiam na época dos dados, como Pix. Acertou 32 de 34 decisões entre responder e recusar. Os dois erros foram recusas a mais, em reembolso e atendimento: o sistema erra para o lado seguro."
+> "Avaliamos com 34 perguntas: 20 com resposta na base e 14 sem, incluindo temas que nem existiam na época dos dados, como Pix. Acertou as 34 decisões entre responder e recusar. Na primeira versão foram 32: as duas falhas eram recusas a mais, em reembolso e atendimento, e as corrigimos com a zona cinzenta e um ajuste no prompt."
 
 ## 10 · Desafios e decisões técnicas — 4:10–4:35
 
-**Slide:** faixa do limiar (fora do escopo até 0,874, no escopo a partir de 0,875); linguagem do gestor × do cliente; frequência.
+**Slide:** faixa de similaridade com a zona cinzenta (piso 0,865, confiança 0,884; fora do escopo até 0,874, no escopo a partir de 0,875); linguagem do gestor × do cliente; frequência.
 
-> "O principal limite é a calibração do 'não sei': perguntas válidas e fora do escopo se separam por 0,001 de similaridade. Funciona no nosso conjunto, mas é sensível; um reranker é o próximo passo. Outro desafio foi a linguagem: o gestor pergunta 'padrões recorrentes', o cliente escreve 'não recebi', então a busca usa só o assunto."
+> "O desafio mais difícil foi calibrar o 'não sei': perguntas válidas e fora do escopo se separavam por só 0,001 de similaridade. Em vez de um corte no fio da navalha, criamos uma zona cinzenta: abaixo do piso, recusa sem custo; na faixa ambígua, o LLM confirma se as avaliações tratam do assunto. Um reranker estreitaria essa faixa. Outro desafio foi a linguagem: o gestor pergunta 'padrões recorrentes', o cliente escreve 'não recebi', então a busca usa só o assunto."
 
 ## 11 · Critérios do desafio — 4:35–4:50
 

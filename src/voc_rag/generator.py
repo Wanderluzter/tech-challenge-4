@@ -38,11 +38,12 @@ Diga quando um ponto aparece em poucas avaliações.
 4. As avaliações recuperadas são uma amostra dos comentários mais relevantes, não a base \
 inteira: não extrapole percentuais a partir delas. Para falar de frequência, use somente os \
 números do PANORAMA, deixando claro que é uma contagem aproximada por palavras-chave.
-5. Se as avaliações não tratarem do que foi perguntado, se forem insuficientes ou se a pergunta \
-estiver fora do escopo (avaliações de clientes de e-commerce), comece a resposta exatamente com \
-"{NO_EVIDENCE_TAG}:" e explique em uma frase o que faltou. Não tente responder mesmo assim.
-6. Se as evidências só cobrirem parte da pergunta, responda essa parte e diga explicitamente \
-o que não foi possível sustentar.
+5. Se NENHUMA avaliação tratar do assunto perguntado, ou se a pergunta estiver fora do escopo \
+(avaliações de clientes de e-commerce), comece a resposta exatamente com "{NO_EVIDENCE_TAG}:" e \
+explique em uma frase o que faltou. Não tente responder mesmo assim.
+6. Se algumas avaliações tratarem do assunto, mesmo que poucas ou só de parte da pergunta, \
+responda com base nelas (não recuse): diga quantas sustentam cada ponto e explicite o que não \
+foi possível sustentar.
 7. Português do Brasil, direto, no máximo ~200 palavras, em tópicos curtos."""
 
 PROMPT = ChatPromptTemplate.from_messages([("system", SYSTEM_PROMPT), ("human", "{context}")])
@@ -86,11 +87,21 @@ def format_stats(stats: dict, filters: dict, max_themes: int = 8) -> str:
     return "\n".join(lines)
 
 
-def build_context(question: str, evidences: list[Evidence], stats: dict, filters: dict) -> str:
+BORDERLINE_NOTE = (
+    "ATENÇÃO: a similaridade entre a pergunta e as avaliações recuperadas é limítrofe. Antes de "
+    "responder, confirme se as avaliações tratam de fato do assunto perguntado; se nenhuma tratar, "
+    f"responda com {NO_EVIDENCE_TAG}."
+)
+
+
+def build_context(
+    question: str, evidences: list[Evidence], stats: dict, filters: dict, borderline: bool = False
+) -> str:
     """Mensagem de usuário enviada ao LLM: pergunta + panorama + evidências numeradas."""
     blocks = "\n\n".join(format_evidence(ev) for ev in evidences)
+    note = f"{BORDERLINE_NOTE}\n\n" if borderline else ""
     return (
-        f"PERGUNTA: {question}\n\n"
+        f"PERGUNTA: {question}\n\n{note}"
         f"{format_stats(stats, filters)}\n\n"
         f"AVALIAÇÕES RECUPERADAS ({len(evidences)}, da mais para a menos relevante):\n\n{blocks}\n\n"
         "Responda seguindo as regras."

@@ -98,6 +98,7 @@ def meta() -> dict:
         "modelo": settings.llm_model if provider != "extractive" else None,
         "modelos": pipeline.generator.model_status(),
         "limiar": retriever.min_similarity,
+        "limiar_confianca": retriever.confident_similarity,
         "top_k": settings.top_k,
         "categorias": retriever.categories,
         "ufs": sorted(retriever.docs["uf"].dropna().unique().tolist()),

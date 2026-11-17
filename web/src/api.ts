@@ -23,6 +23,7 @@ export type Meta = {
   modelo: string | null;
   modelos: ModelStatus[];
   limiar: number;
+  limiar_confianca: number;
   top_k: number;
   categorias: string[];
   ufs: string[];
@@ -63,6 +64,8 @@ export type AskResult = {
     min_similarity: number;
     max_similarity: number;
     support_similarity: number;
+    confident_similarity: number;
+    borderline: boolean;
     n_dense: number;
     n_bm25: number;
     n_candidates: number;
@@ -76,6 +79,8 @@ export type AskResult = {
   model: string;
   requested_model: string;
   timings_ms: Record<string, number>;
+  coverage: Theme[]; // recusas: temas que a base cobre
+  suggestions: string[]; // recusas: perguntas que a base sabe responder
 };
 
 export type BaseMetrics = {
@@ -132,6 +137,10 @@ export type QualityMetrics = {
     acuracia_escopo_limiar_sugerido: number;
     sim_suporte_no_escopo_min: number;
     sim_suporte_fora_escopo_max: number;
+    piso_sugerido?: number;
+    limiar_confianca_sugerido?: number;
+    zona_cinzenta?: number;
+    erros_de_zona?: number;
     linhas: {
       pergunta: string;
       no_escopo: boolean;
@@ -139,12 +148,15 @@ export type QualityMetrics = {
       relevancia_termos: number | null;
       sim_max: number;
       sim_suporte: number;
+      zona?: string;
     }[];
   };
   ponta_a_ponta: {
     provedor: string;
     modelo: string;
     limiar: number;
+    limiar_confianca?: number;
+    chamadas_llm?: number;
     corretas: number;
     perguntas: number;
     linhas: {
@@ -153,6 +165,7 @@ export type QualityMetrics = {
       esperado: string;
       obtido: string;
       etapa_recusa: string | null;
+      zona?: string;
       citacoes: number;
       correto: boolean;
     }[];

@@ -1,6 +1,6 @@
 # Plano — Tech Challenge Fase 4
 
-Situação em 16/11/2026: **todos os requisitos técnicos estão prontos e medidos na base real**. Falta só o que depende da equipe: nomes e RMs, gravação do vídeo e envio na plataforma.
+Situação em 17/11/2026: **todos os requisitos técnicos estão prontos e medidos na base real**. Falta só o que depende da equipe: nomes e RMs, gravação do vídeo e envio na plataforma.
 
 ## Requisitos do enunciado
 
@@ -9,7 +9,7 @@ Situação em 16/11/2026: **todos os requisitos técnicos estão prontos e medid
 | 1. Construção da base de conhecimento (seleção, limpeza, ausentes, organização, embeddings, indexação) | Pronto: 38.287 documentos indexados com `multilingual-e5-small` no ChromaDB | `data_prep.py`, `index.py`, README §4 |
 | 2. Pipeline RAG (transformação, recuperação, seleção, contexto, geração) | Pronto: busca híbrida, RRF, MMR, panorama por temas e geração com LLM (Gemini) | `query.py`, `retriever.py`, `generator.py`, README §5 |
 | 3. Respostas fundamentadas com evidências visíveis | Pronto: citações clicáveis, cartões de evidência, contexto enviado ao modelo | interface React, README §6 |
-| 4. Perguntas sem evidência suficiente | Pronto e medido: 14/14 recusas corretas; 32/34 decisões corretas no total | README §6 e §8, Dashboard › Qualidade |
+| 4. Perguntas sem evidência suficiente | Pronto e medido: 14/14 recusas corretas; 34/34 decisões corretas no total (zona cinzenta + recusa com temas e perguntas sugeridas) | README §6 e §8, Dashboard › Qualidade |
 | Adicional: metadados | Pronto: nota, ano, categoria, situação da entrega e UF, inferidos ou manuais | README §7 |
 | Entregável: repositório com README | Pronto, **faltam equipe e link do vídeo** no topo | `README.md` |
 | Entregável: vídeo de até 7 min | Roteiro de 4:50 alinhado aos itens do enunciado e à apresentação (11 slides); **gravação pendente** | `docs/ROTEIRO_VIDEO.md` |
@@ -36,12 +36,12 @@ Situação em 16/11/2026: **todos os requisitos técnicos estão prontos e medid
 
 ## Limitações conhecidas (README §11)
 
-- Margem do limiar de apenas 0,001 entre perguntas no escopo e fora dele.
-- Duas recusas indevidas no `eval`: reembolso (no limiar) e atendimento (recusada pelo LLM).
+- Similaridades comprimidas: margem de 0,001 entre perguntas no escopo e fora dele, tratada pela zona cinzenta (0,865–0,884) com o LLM decidindo os casos ambíguos; calibrada em 30 perguntas.
+- Perguntas na zona cinzenta custam uma chamada ao LLM e, sem LLM disponível, são recusadas.
 - Relevância medida por termos esperados, não por anotação humana.
 
 ## Se sobrar tempo
 
-1. **Reranker** cross-encoder multilíngue sobre os candidatos do RRF — atacaria a margem do limiar.
+1. **Reranker** cross-encoder multilíngue sobre os candidatos do RRF — estreitaria a zona cinzenta.
 2. **Anotar relevância** de ~50 pares pergunta–avaliação para medir precisão e recall reais.
 3. **Verificador de fidelidade** (LLM-juiz): cada frase é sustentada pela avaliação citada?

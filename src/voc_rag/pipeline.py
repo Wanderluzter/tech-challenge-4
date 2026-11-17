@@ -5,14 +5,17 @@ estado tipado, e as duas recusas antes do LLM são arestas condicionais.
 
     interpretar ──(pergunta vazia)──▶ FIM
          │
-    recuperar ──(evidência insuficiente)──▶ FIM      ← o LLM nem é chamado
-         │
+    recuperar ──(abaixo do piso)──▶ FIM      ← o LLM nem é chamado
+         │  (zona cinzenta: segue marcada como limítrofe e o LLM confirma a relevância)
        gerar (chain LCEL + validação das citações) ──▶ FIM
+
+Toda recusa vem acompanhada do que a base sabe responder (temas do recorte e perguntas
+sugeridas), para que o "não sei" não seja um beco sem saída.
 """
 from __future__ import annotations
 
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from typing import TypedDict
 
 from langgraph.graph import END, START, StateGraph
@@ -22,10 +25,16 @@ from .generator import Generation, Generator, build_context
 from .text import clean_text
 from .query import Filters, ParsedQuery, merge_filters, parse_query
 from .retriever import Evidence, RetrievalResult, Retriever
+from .themes import THEME_QUESTIONS
 
 REFUSAL = (
     "Não encontrei evidências suficientes nas avaliações dos clientes para responder a essa "
     "pergunta com segurança."
+)
+BORDERLINE_WITHOUT_LLM = (
+    "A evidência ficou na zona cinzenta de similaridade ({support:.3f}, entre o piso {floor:.3f} e o "
+    "limiar de confiança {confident:.3f}) e não há LLM disponível para confirmar se as avaliações "
+    "tratam do assunto."
 )
 
 
@@ -47,6 +56,9 @@ class RagAnswer:
     model: str = ""
     requested_model: str = ""
     timings_ms: dict = field(default_factory=dict)
+    # preenchidos nas recusas: o que a base cobre e perguntas que ela sabe responder
+    coverage: list[dict] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
 
     @property
     def cited_evidences(self) -> list[Evidence]:
@@ -114,12 +126,22 @@ class RagPipeline:
         """2) recuperação híbrida + seleção + teste de suficiência."""
         t0 = time.perf_counter()
         retrieval = self.retriever.retrieve(state["parsed"], state["filters"], state.get("k"))
+        if retrieval.borderline and self.generator.provider == "extractive":
+            # sem LLM não há 2ª barreira: evidência limítrofe vira recusa
+            reason = BORDERLINE_WITHOUT_LLM.format(
+                support=retrieval.support_similarity, floor=retrieval.min_similarity,
+                confident=retrieval.confident_similarity,
+            )
+            retrieval = replace(retrieval, evidences=[], sufficient=False, reason=reason)
         return {"retrieval": retrieval, "timings_ms": {**state["timings_ms"], "recuperacao": _elapsed_ms(t0)}}
 
     def _generate(self, state: RagState) -> dict:
         """3) contexto + geração (chain LCEL) + validação das citações."""
         retrieval = state["retrieval"]
-        context = build_context(clean_text(state["question"]), retrieval.evidences, retrieval.stats, state["filters"])
+        context = build_context(
+            clean_text(state["question"]), retrieval.evidences, retrieval.stats, state["filters"],
+            borderline=retrieval.borderline,
+        )
         t0 = time.perf_counter()
         generation = self.generator.generate(
             context, retrieval.evidences, state.get("model"), state.get("allow_fallback", True)
@@ -167,8 +189,16 @@ class RagPipeline:
             return RagAnswer(
                 status="sem_evidencia", answer=REFUSAL, refusal_stage="recuperacao",
                 refusal_reason=retrieval.reason, evidences=[], cited_refs=[], retrieval=retrieval,
-                context=None, **base,
+                context=None, **base, **self._refusal_help(retrieval),
             )
+
+        if retrieval.borderline and generation.provider == "extractive_fallback":
+            # o LLM era a 2ª barreira da zona cinzenta e não respondeu: não dá para afirmar nada
+            reason = BORDERLINE_WITHOUT_LLM.format(
+                support=retrieval.support_similarity, floor=retrieval.min_similarity,
+                confident=retrieval.confident_similarity,
+            )
+            generation = replace(generation, status="sem_evidencia", answer=reason, cited_refs=[])
 
         refused = generation.status != "ok"
         return RagAnswer(
@@ -185,4 +215,12 @@ class RagPipeline:
             model=generation.model,
             requested_model=(model if model in self.generator.models else (self.generator.models or [""])[0]),
             **base,
+            **(self._refusal_help(retrieval) if refused else {}),
         )
+
+    def _refusal_help(self, retrieval: RetrievalResult, n_themes: int = 5, n_questions: int = 3) -> dict:
+        """O que a base sabe responder: temas do recorte (ou da base inteira) e perguntas sugeridas."""
+        stats = retrieval.stats if retrieval.stats.get("total") else self.retriever.base_stats
+        themes = stats.get("temas", [])[:n_themes]
+        suggestions = [THEME_QUESTIONS[t["tema"]] for t in themes if t["tema"] in THEME_QUESTIONS]
+        return {"coverage": themes, "suggestions": suggestions[:n_questions]}

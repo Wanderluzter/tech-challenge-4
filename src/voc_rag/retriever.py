@@ -3,6 +3,13 @@
 Fluxo: busca densa (Chroma) + busca lexical (BM25) → fusão por RRF → corte por
 similaridade mínima → diversificação por MMR → top-k.
 
+Suficiência em três faixas, pela similaridade de suporte (N-ésima melhor avaliação):
+- abaixo do piso (min_similarity): recusa direta, o LLM nem é chamado;
+- entre o piso e o limiar de confiança: zona cinzenta, a evidência segue para o LLM
+  marcada como limítrofe e ele decide se ela trata do assunto (2ª barreira);
+- a partir do limiar de confiança: evidência suficiente.
+Assim a decisão não depende de um único corte calibrado no fio da navalha.
+
 - Densa: encontra paráfrases ("não chegou" ~ "até agora nada do produto").
 - BM25: garante termos exatos que o embedding dilui (nomes de produto, "nota fiscal").
 - RRF: combina os dois rankings sem precisar normalizar escalas de score diferentes.
@@ -65,6 +72,8 @@ class RetrievalResult:
     n_above_threshold: int
     stats: dict = field(default_factory=dict)
     queries: list[str] = field(default_factory=list)  # textos efetivamente buscados
+    confident_similarity: float = 0.0
+    borderline: bool = False  # suporte na zona cinzenta: o LLM confirma a relevância
 
 
 MAX_SUBQUERIES = 5
@@ -89,6 +98,13 @@ class Retriever:
                 "min_similarity", DEFAULT_MIN_SIMILARITY[self.manifest["embedding_backend"]]
             )
         )
+        confident = (
+            settings.confident_similarity
+            if settings.confident_similarity is not None
+            else self.manifest.get("confident_similarity", self.min_similarity)
+        )
+        self.confident_similarity = max(confident, self.min_similarity)
+        self.base_stats = self._stats(np.ones(len(self.docs), dtype=bool))
 
     # ------------------------------------------------------------------ buscas
     def _dense(self, query_vector: np.ndarray, filters: Filters) -> list[str]:
@@ -174,7 +190,10 @@ class Retriever:
         def empty(reason: str, **extra) -> RetrievalResult:
             base = dict(max_similarity=0.0, support_similarity=0.0, n_dense=0, n_bm25=0, n_candidates=0, n_above_threshold=0)
             base.update(extra)
-            return RetrievalResult([], False, reason, self.min_similarity, stats=stats, **base)
+            return RetrievalResult(
+                [], False, reason, self.min_similarity, stats=stats,
+                confident_similarity=self.confident_similarity, **base,
+            )
 
         if stats["total"] == 0:
             return empty("Nenhuma avaliação na base atende aos filtros aplicados.")
@@ -251,6 +270,9 @@ class Retriever:
                     rrf_score=round(rrf[rid], 5),
                 )
             )
+        borderline = support_sim < self.confident_similarity
         return RetrievalResult(
-            evidences, True, "ok", self.min_similarity, max_sim, n_above_threshold=len(relevant), stats=stats, **counts
+            evidences, True, "limitrofe" if borderline else "ok", self.min_similarity, max_sim,
+            n_above_threshold=len(relevant), stats=stats, confident_similarity=self.confident_similarity,
+            borderline=borderline, **counts,
         )
