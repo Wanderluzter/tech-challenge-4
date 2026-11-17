@@ -8,7 +8,8 @@ O enunciado pede o *raciocínio técnico*, não um tour pela tela: cada slide re
 
 - Instale as dependências (`pip install -r requirements.txt`), suba a interface com `uvicorn voc_rag.api:app --port 8000` (com `web/dist` já construído) e abra http://localhost:8000. Zoom do navegador em 125%.
 - **A geração leva de 10 a 50 s** com o Gemini gratuito. Não espere ao vivo: abra cada pergunta da demonstração numa aba própria antes de gravar, pelos links abaixo. Na gravação, só troque de aba.
-- Confira o seletor de modelo no cabeçalho: ponto verde = disponível, âmbar = sem cota. Cada pergunta respondida gasta 1 chamada da cota; recusas na recuperação não gastam nenhuma.
+- O piso (0,865) e o limiar de confiança (0,884) vêm de `data/index/manifest.json`. Se o índice foi refeito, rode antes `python -m voc_rag.cli eval --write`; sem isso, o piso volta a 0,80 e não há zona cinzenta.
+- Confira o seletor de modelo no cabeçalho: ponto verde = disponível, âmbar = sem cota. Na última avaliação, o `gemini-3.5-flash` estava sem cota e o `gemini-3-flash-preview` respondeu. Cada pergunta respondida gasta 1 chamada da cota; recusas na recuperação não gastam nenhuma.
 - Se quiser o painel *Uso do RAG* limpo, apague `data/logs/perguntas.jsonl` antes.
 
 Links da demonstração (cole na barra de endereços):
@@ -65,7 +66,9 @@ http://localhost:8000/?q=O que os clientes acham do tempo de bateria do iPhone 1
 - **Pergunta 2 (20 s)** — *O que os clientes mais elogiam na categoria beleza e saúde?*
   > "Dois filtros inferidos: nota 4 ou 5 e a categoria, aplicados antes da busca. Posso trocá-los no botão Filtros."
 - **Pergunta 3 (20 s)** — *Qual é a capital da França?*
-  > "Nenhuma avaliação atinge a similaridade mínima: recusa na recuperação, sem chamar o modelo. Mas a recusa não é um beco sem saída: mostra o que a base cobre e sugere perguntas que ela sabe responder. Clico numa e ela já é respondida."
+  > "Nenhuma avaliação atinge a similaridade mínima: recusa na recuperação, sem chamar o modelo. Mas a recusa não é um beco sem saída: mostra o que a base cobre e sugere perguntas que ela sabe responder; um clique envia a sugestão como nova pergunta."
+  >
+  > *(Clicar na sugestão chama o LLM e leva de 10 a 50 s. Ou só aponte as sugestões sem clicar, ou clique e corte a espera na edição.)*
 - **Pergunta 4 (20 s)** — *O que os clientes acham do tempo de bateria do iPhone 15?*
   > "Parece do domínio, mas só duas avaliações passam do piso, e exigimos três: recusa antes do modelo."
 
